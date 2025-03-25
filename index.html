@@ -4,169 +4,91 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA QR Scanner</title>
-    <link rel="manifest" href="manifest.json"> <!-- Manifest per PWA -->
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js')
-                .then(reg => console.log('Service Worker registrato!', reg))
-                .catch(err => console.log('Errore Service Worker:', err));
-        }
-    </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
+    <title>PWA Server Communication</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        main {
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
         }
-        #reader {
-            width: 300px;
-        }
-        #status {
-            font-size: 1.2rem;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        #status.connected {
-            color: green;
-        }
-        #status.disconnected {
-            color: red;
-        }
-        .input-group {
-            margin-top: 10px;
-        }
-        input, select, button {
-            padding: 8px;
+        input, button {
+            margin: 10px;
+            padding: 10px;
             font-size: 1rem;
-            margin: 5px;
         }
-        button {
-            cursor: pointer;
-            background-color: blue;
-            color: white;
-            border: none;
-        }
-        button:hover {
-            background-color: darkblue;
+        #serverStatus {
+            margin-top: 20px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h1>QR Code Scanner</h1>
+    <h1>Inviato Dati al Server</h1>
+
+    <!-- Form di input per inviare i dati -->
+    <input type="text" id="serverAddress" placeholder="Indirizzo Server" value="192.168.178.53">
+    <input type="number" id="serverPort" placeholder="Porta" value="5000">
     
-    <div id="status" class="disconnected">NON CONNESSO</div>
+    <!-- Selezione tra HTTP e HTTPS -->
+    <select id="protocol">
+        <option value="http">HTTP</option>
+        <option value="https">HTTPS</option>
+    </select>
 
-    <div class="input-group">
-        <label>Protocollo:</label>
-        <select id="protocol">
-            <option value="http">http</option>
-            <option value="https">https</option>
-        </select>
-    </div>
+    <input type="text" id="dataToSend" placeholder="Dati da inviare">
 
-    <div class="input-group">
-        <label>Indirizzo Server:</label>
-        <input type="text" id="serverIP" placeholder="192.168.1.100">
-    </div>
+    <!-- Pulsante per inviare i dati -->
+    <button onclick="sendDataToServer()">Invia Dati</button>
 
-    <div class="input-group">
-        <label>Porta:</label>
-        <input type="number" id="serverPort" placeholder="5000">
-    </div>
-
-    <button onclick="checkConnection()">Test Connessione</button>
-
-    <main>
-        <div id="reader"></div>
-        <div id="result"></div>
-
-        <div id="manual-input">
-            <input type="text" id="manualText" placeholder="Inserisci testo...">
-            <button onclick="sendManualData()">Invia</button>
-        </div>
-    </main>
+    <!-- Status del server -->
+    <div id="serverStatus"></div>
 
     <script>
-        function getServerUrl() {
-            const protocol = document.getElementById("protocol").value;
-            const ip = document.getElementById("serverIP").value.trim();
-            const port = document.getElementById("serverPort").value.trim();
-            return `${protocol}://${ip}:${port}/receive_data`;
-        }
+        // Funzione per inviare i dati al server Flask
+        function sendDataToServer() {
+            const serverAddress = document.getElementById('serverAddress').value;
+            const serverPort = document.getElementById('serverPort').value;
+            const protocol = document.getElementById('protocol').value; // http o https
+            const inputData = document.getElementById('dataToSend').value;
 
-        function updateConnectionStatus(isConnected) {
-            const statusElement = document.getElementById("status");
-            if (isConnected) {
-                statusElement.innerHTML = "CONNESSO";
-                statusElement.className = "connected";
-            } else {
-                statusElement.innerHTML = "NON CONNESSO";
-                statusElement.className = "disconnected";
-            }
-        }
+            const fullUrl = `${protocol}://${serverAddress}:${serverPort}/receive_data`;
 
-        function checkConnection() {
-            const url = getServerUrl();
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ test: "connection" })
+            // Mostra lo stato "Inviando..." prima di inviare
+            document.getElementById('serverStatus').innerText = "Inviando i dati...";
+            document.getElementById('serverStatus').style.color = "orange";
+
+            fetch(fullUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ data: inputData }),
             })
-            .then(response => updateConnectionStatus(response.ok))
-            .catch(() => updateConnectionStatus(false));
-        }
-
-        function sendDataToServer(qrData) {
-            const url = getServerUrl();
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ scanned_data: qrData })
+            .then(response => {
+                // Verifica se la risposta è ok
+                if (response.ok) {
+                    return response.json(); // Converte la risposta in JSON
+                } else {
+                    throw new Error("Errore nel server, risposta non valida");
+                }
             })
-            .then(response => response.json())
-            .then(data => console.log("Risposta server:", data))
-            .catch(error => console.error("Errore invio dati:", error));
-        }
-
-        function sendManualData() {
-            const textData = document.getElementById("manualText").value;
-            if (textData.trim() === "") {
-                alert("Inserisci un testo valido!");
-                return;
-            }
-
-            const url = getServerUrl();
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ manual_input: textData })
+            .then(data => {
+                // Successo: Mostra il messaggio di successo
+                document.getElementById('serverStatus').innerText = "Dati inviati con successo!";
+                document.getElementById('serverStatus').style.color = "green";
             })
-            .then(response => response.json())
-            .then(data => console.log("Risposta server:", data))
-            .catch(error => console.error("Errore invio dati:", error));
+            .catch(error => {
+                // Errori di rete o del server
+                console.error("Errore:", error);
+                document.getElementById('serverStatus').innerText = "Errore nell'invio dei dati!";
+                document.getElementById('serverStatus').style.color = "red";
+            });
         }
-
-        const scanner = new Html5QrcodeScanner('reader', { qrbox: 250, fps: 10 });
-        scanner.render(
-            function success(result) {
-                document.getElementById('result').innerHTML = `<h2>Scansionato!</h2><p>${result}</p>`;
-                sendDataToServer(result);
-                scanner.clear();
-            },
-            function error(err) {
-                console.error("Errore scanner:", err);
-            }
-        );
     </script>
 
 </body>
