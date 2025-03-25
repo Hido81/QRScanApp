@@ -1,95 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA Server Communication</title>
+    <title>PWA - Invia Dati</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
             height: 100vh;
-            margin: 0;
+            background-color: #f4f4f4;
         }
-        input, button {
-            margin: 10px;
-            padding: 10px;
-            font-size: 1rem;
+        #container {
+            text-align: center;
         }
-        #serverStatus {
+        #sendButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #response {
             margin-top: 20px;
-            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h1>Inviato Dati al Server</h1>
+<div id="container">
+    <h1>PWA Invia Dati</h1>
+    <button id="sendButton">Invia CIAO MAMMA</button>
+    <div id="response"></div>
+</div>
 
-    <!-- Form di input per inviare i dati -->
-    <input type="text" id="serverAddress" placeholder="Indirizzo Server" value="192.168.178.53">
-    <input type="number" id="serverPort" placeholder="Porta" value="5000">
-    
-    <!-- Selezione tra HTTP e HTTPS -->
-    <select id="protocol">
-        <option value="http">HTTP</option>
-        <option value="https">HTTPS</option>
-    </select>
+<script>
+    document.getElementById('sendButton').addEventListener('click', function() {
+        // URL del server Flask
+        const serverUrl = 'http://192.168.178.53:5000/receive_data';
+        
+        // Dati da inviare
+        const dataToSend = {
+            data: 'CIAO MAMMA'
+        };
 
-    <input type="text" id="dataToSend" placeholder="Dati da inviare">
-
-    <!-- Pulsante per inviare i dati -->
-    <button onclick="sendDataToServer()">Invia Dati</button>
-
-    <!-- Status del server -->
-    <div id="serverStatus"></div>
-
-    <script>
-        // Funzione per inviare i dati al server Flask
-        function sendDataToServer() {
-            const serverAddress = document.getElementById('serverAddress').value;
-            const serverPort = document.getElementById('serverPort').value;
-            const protocol = document.getElementById('protocol').value; // http o https
-            const inputData = document.getElementById('dataToSend').value;
-
-            const fullUrl = `${protocol}://${serverAddress}:${serverPort}/receive_data`;
-
-            // Mostra lo stato "Inviando..." prima di inviare
-            document.getElementById('serverStatus').innerText = "Inviando i dati...";
-            document.getElementById('serverStatus').style.color = "orange";
-
-            fetch(fullUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ data: inputData }),
-            })
-            .then(response => {
-                // Verifica se la risposta è ok
-                if (response.ok) {
-                    return response.json(); // Converte la risposta in JSON
-                } else {
-                    throw new Error("Errore nel server, risposta non valida");
-                }
-            })
-            .then(data => {
-                // Successo: Mostra il messaggio di successo
-                document.getElementById('serverStatus').innerText = "Dati inviati con successo!";
-                document.getElementById('serverStatus').style.color = "green";
-            })
-            .catch(error => {
-                // Errori di rete o del server
-                console.error("Errore:", error);
-                document.getElementById('serverStatus').innerText = "Errore nell'invio dei dati!";
-                document.getElementById('serverStatus').style.color = "red";
-            });
-        }
-    </script>
+        // Invia i dati al server Flask con una richiesta POST
+        fetch(serverUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dataToSend)
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('response').textContent = `Risposta: ${data.message}`;
+        })
+        .catch(error => {
+            document.getElementById('response').textContent = 'Errore nella connessione al server';
+            console.error('Errore:', error);
+        });
+    });
+</script>
 
 </body>
 </html>
