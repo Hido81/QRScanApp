@@ -28,20 +28,36 @@
         #reader {
             width: 300px;
         }
-        #result {
+        #result, #status {
             font-size: 1.5rem;
             margin-top: 10px;
-        }
-        #status {
-            font-size: 1.2rem;
             font-weight: bold;
-            margin-top: 20px;
         }
-        .connected {
+        #status.connected {
             color: green;
         }
-        .disconnected {
+        #status.disconnected {
             color: red;
+        }
+        #manual-input {
+            margin-top: 20px;
+        }
+        input {
+            padding: 8px;
+            font-size: 1rem;
+            width: 200px;
+        }
+        button {
+            padding: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: blue;
+            color: white;
+            border: none;
+            margin-left: 5px;
+        }
+        button:hover {
+            background-color: darkblue;
         }
     </style>
 </head>
@@ -49,9 +65,16 @@
 
     <h1>QR Code Scanner</h1>
     <div id="status" class="disconnected">NON CONNESSO</div>
+
     <main>
         <div id="reader"></div>
         <div id="result"></div>
+
+        <!-- Input manuale + Pulsante -->
+        <div id="manual-input">
+            <input type="text" id="manualText" placeholder="Inserisci testo...">
+            <button onclick="sendManualData()">Invia</button>
+        </div>
     </main>
 
     <script>
@@ -85,6 +108,23 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ scanned_data: qrData })
+            })
+            .then(response => response.json())
+            .then(data => console.log("Risposta server:", data))
+            .catch(error => console.error("Errore invio dati:", error));
+        }
+
+        function sendManualData() {
+            const textData = document.getElementById("manualText").value;
+            if (textData.trim() === "") {
+                alert("Inserisci un testo valido!");
+                return;
+            }
+
+            fetch(serverUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ manual_input: textData })
             })
             .then(response => response.json())
             .then(data => console.log("Risposta server:", data))
