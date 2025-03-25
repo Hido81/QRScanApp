@@ -44,24 +44,28 @@
         const serverUrl = 'http://192.168.178.53:5000/receive_data';  // L'URL del server Flask
 
         // Funzione per verificare la connessione al server
-        function checkConnection() {
-            fetch(serverUrl, {
-                method: 'GET',  // Metodo GET per testare se il server è raggiungibile
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    updateConnectionStatus(true);
-                } else {
-                    updateConnectionStatus(false);
-                }
-            })
-            .catch(() => {
-                updateConnectionStatus(false);
-            });
+        // Funzione per verificare la connessione al server
+function checkConnection() {
+    fetch(serverUrl, {
+        method: 'POST',  // Cambiato da GET a POST
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ test: "connection" })  // Invia una richiesta con un corpo di esempio
+    })
+    .then(response => {
+        if (response.ok) {
+            updateConnectionStatus(true);
+        } else {
+            updateConnectionStatus(false);
+            console.log('Server non raggiungibile: ', response.status, response.statusText);
         }
+    })
+    .catch((error) => {
+        updateConnectionStatus(false);
+        console.log('Errore nella connessione:', error);
+    });
+}
 
         // Funzione per aggiornare lo stato di connessione
         function updateConnectionStatus(isConnected) {
