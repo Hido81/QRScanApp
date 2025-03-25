@@ -1,20 +1,13 @@
 {
-  "name": "QR Code Scanner",
-  "short_name": "QR Scanner",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ]
-}
+    "name": "QR Code Scanner PWA",
+    "short_name": "QR Scanner",
+    "start_url": "/index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "icons": [
+        {
+            "src": "icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
