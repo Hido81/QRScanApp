@@ -1,72 +1,37 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA - Invia Dati</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f4;
-        }
-        #container {
-            text-align: center;
-        }
-        #sendButton {
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        #response {
-            margin-top: 20px;
-        }
-    </style>
+    <title>Invia Dati</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
+    <h1>Invia "CIAO MAMMA" al Server Flask</h1>
 
-<div id="container">
-    <h1>PWA Invia Dati</h1>
-    <button id="sendButton">Invia CIAO MAMMA</button>
-    <div id="response"></div>
-</div>
+    <button id="sendDataButton">Invia</button>
 
-<script>
-    document.getElementById('sendButton').addEventListener('click', function() {
-        // URL del server Flask
-        const serverUrl = 'http://192.168.178.53:5000/receive_data';
-        
-        // Dati da inviare
-        const dataToSend = {
-            data: 'CIAO MAMMA'
-        };
+    <script>
+        $('#sendDataButton').click(function() {
+            var serverUrl = 'http://192.168.178.53:5000/receive_data';  // Cambia con l'IP del tuo server
+            var dataToSend = { data: "CIAO MAMMA" };
 
-        // Invia i dati al server Flask con una richiesta POST
-        fetch(serverUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(dataToSend)
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('response').textContent = `Risposta: ${data.message}`;
-        })
-        .catch(error => {
-            document.getElementById('response').textContent = 'Errore nella connessione al server';
-            console.error('Errore:', error);
+            $.ajax({
+                url: serverUrl,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(dataToSend),
+                success: function(response) {
+                    console.log('Dati inviati con successo:', response);
+                    alert('Dati inviati con successo!');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Errore nell\'invio dei dati:', error);
+                    alert('Errore nell\'invio dei dati.');
+                }
+            });
         });
-    });
-</script>
-
+    </script>
 </body>
 </html>
