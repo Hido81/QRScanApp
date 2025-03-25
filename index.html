@@ -4,29 +4,16 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invia Dati con WebSocket</title>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <title>Invia Dati</title>
 </head>
 <body>
-    <h1>Invia "CIAO MAMMA" al Server Flask tramite WebSocket</h1>
+    <h1>Invia "CIAO MAMMA" al Server Flask</h1>
 
-    <button id="sendDataButton">Invia</button>
+    <!-- Form HTML per inviare i dati -->
+    <form action="http://192.168.178.53:5000/receive_data" method="POST">
+        <input type="hidden" name="data" value="CIAO MAMMA">
+        <button type="submit">Invia Dati</button>
+    </form>
 
-    <script>
-        // Crea una connessione WebSocket al server Flask
-        var socket = io('http://192.168.178.53:5000');  // Cambia con l'IP del tuo server
-
-        // Quando il pulsante viene premuto, invia i dati tramite WebSocket
-        document.getElementById('sendDataButton').addEventListener('click', function() {
-            var dataToSend = { data: "CIAO MAMMA" };
-            socket.emit('send_data', dataToSend);
-        });
-
-        // Ricevi la risposta dal server tramite WebSocket
-        socket.on('receive_data', function(message) {
-            console.log('Dati ricevuti dal server:', message);
-            alert('Dati ricevuti dal server!');
-        });
-    </script>
 </body>
 </html>
