@@ -27,7 +27,7 @@
     <script>
         // Funzione per inviare i dati al server Flask (in rete locale)
         function sendDataToServer(data) {
-            const serverUrl = 'http://192.168.x.x:5000/receive_data'; // Sostituisci con l'IP locale del server Flask
+            const serverUrl = 'http://192.168.178.53:5000/receive_data'; // Sostituisci con l'IP locale del server Flask
 
             fetch(serverUrl, {
                 method: 'POST',
