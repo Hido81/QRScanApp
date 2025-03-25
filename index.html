@@ -46,12 +46,12 @@
         // Funzione per verificare la connessione al server
         // Funzione per verificare la connessione al server
 function checkConnection() {
-    fetch(serverUrl, {
+    fetch("http://192.168.178.53:5000/receive_data", {
         method: 'POST',  // Cambiato da GET a POST
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ test: "connection" })  // Invia una richiesta con un corpo di esempio
+        body: JSON.stringify({ test: "connection" })  // Invia un JSON di test
     })
     .then(response => {
         if (response.ok) {
