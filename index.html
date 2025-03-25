@@ -10,10 +10,10 @@
     <h1>Invia "CIAO MAMMA" al Server Flask</h1>
 
     <!-- Form HTML per inviare i dati -->
-    <form action="https://192.168.178.53:5000/receive_data" method="POST" accept-charset="UTF-8">
-    <input type="hidden" name="data" value="CIAO MAMMA">
-    <button type="submit">Invia Dati</button>
-</form>
+    <form action="http://192.168.178.53:5000/receive_data" method="POST">
+        <input type="hidden" name="data" value="CIAO MAMMA">
+        <button type="submit">Invia Dati</button>
+    </form>
 
 </body>
 </html>
