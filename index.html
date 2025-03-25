@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PWA QR Scanner</title>
     <link rel="manifest" href="manifest.json"> <!-- Manifest per PWA -->
+    
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js')
@@ -13,6 +14,7 @@
                 .catch(err => console.log('Errore Service Worker:', err));
         }
     </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
     <style>
         body {
@@ -28,8 +30,8 @@
         #reader {
             width: 300px;
         }
-        #result, #status {
-            font-size: 1.5rem;
+        #status {
+            font-size: 1.2rem;
             margin-top: 10px;
             font-weight: bold;
         }
@@ -39,22 +41,19 @@
         #status.disconnected {
             color: red;
         }
-        #manual-input {
-            margin-top: 20px;
+        .input-group {
+            margin-top: 10px;
         }
-        input {
+        input, select, button {
             padding: 8px;
             font-size: 1rem;
-            width: 200px;
+            margin: 5px;
         }
         button {
-            padding: 10px;
-            font-size: 1rem;
             cursor: pointer;
             background-color: blue;
             color: white;
             border: none;
-            margin-left: 5px;
         }
         button:hover {
             background-color: darkblue;
@@ -64,13 +63,33 @@
 <body>
 
     <h1>QR Code Scanner</h1>
+    
     <div id="status" class="disconnected">NON CONNESSO</div>
+
+    <div class="input-group">
+        <label>Protocollo:</label>
+        <select id="protocol">
+            <option value="http">http</option>
+            <option value="https">https</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>Indirizzo Server:</label>
+        <input type="text" id="serverIP" placeholder="192.168.1.100">
+    </div>
+
+    <div class="input-group">
+        <label>Porta:</label>
+        <input type="number" id="serverPort" placeholder="5000">
+    </div>
+
+    <button onclick="checkConnection()">Test Connessione</button>
 
     <main>
         <div id="reader"></div>
         <div id="result"></div>
 
-        <!-- Input manuale + Pulsante -->
         <div id="manual-input">
             <input type="text" id="manualText" placeholder="Inserisci testo...">
             <button onclick="sendManualData()">Invia</button>
@@ -78,7 +97,12 @@
     </main>
 
     <script>
-        const serverUrl = "http://192.168.178.53:5000/receive_data";
+        function getServerUrl() {
+            const protocol = document.getElementById("protocol").value;
+            const ip = document.getElementById("serverIP").value.trim();
+            const port = document.getElementById("serverPort").value.trim();
+            return `${protocol}://${ip}:${port}/receive_data`;
+        }
 
         function updateConnectionStatus(isConnected) {
             const statusElement = document.getElementById("status");
@@ -92,7 +116,8 @@
         }
 
         function checkConnection() {
-            fetch(serverUrl, {
+            const url = getServerUrl();
+            fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ test: "connection" })
@@ -101,10 +126,9 @@
             .catch(() => updateConnectionStatus(false));
         }
 
-        setInterval(checkConnection, 5000); // Controlla connessione ogni 5 sec
-
         function sendDataToServer(qrData) {
-            fetch(serverUrl, {
+            const url = getServerUrl();
+            fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ scanned_data: qrData })
@@ -121,7 +145,8 @@
                 return;
             }
 
-            fetch(serverUrl, {
+            const url = getServerUrl();
+            fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ manual_input: textData })
