@@ -1,45 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QR Code Scanner PWA</title>
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css">
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-    .then(reg => console.log('Service Worker registered', reg))
-    .catch(err => console.log('Service Worker not registered', err));
-}
-</script>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        // Registrazione del service worker per la gestione offline
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service Worker registrato', reg))
+                .catch(err => console.log('Service Worker non registrato', err));
+        }
+    </script>
 </head>
-<body>
-<main>
-    <div id="reader"></div>
-    <div id="result"></div>
-</main>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
-<script>
-const scanner = new Html5QrcodeScanner('reader', {
-    qrbox: { width: 250, height: 250 },
-    fps: 20,
-});
-scanner.render(success, error);
+<body data-rsssl="1">
+    <main>
+        <div id="reader"></div>
+        <div id="result"></div>
+    </main>
 
-function success(result) {
-    document.getElementById('result').innerHTML = `
-        <h2>Success!</h2>
-        <p><a href="${result}">${result}</a></p>
-    `;
-    scanner.clear();
-    document.getElementById('reader').remove();
-}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js" integrity="sha512-k/KAe4Yff9EUdYI5/IAHlwUswqeipP+Cp5qnrsUjTPCgl51La2/JhyyjNciztD7mWNKLSXci48m7cctATKfLlQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <script>
+        // Funzione per inviare i dati al server Flask (in rete locale)
+        function sendDataToServer(data) {
+            const serverUrl = 'http://192.168.x.x:5000/receive_data'; // Sostituisci con l'IP locale del server Flask
 
-function error(err) {
-    console.error(err);
-}
-</script>
+            fetch(serverUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => response.json())
+            .then(responseData => {
+                console.log('Risposta del server:', responseData);
+            })
+            .catch(error => {
+                console.error('Errore durante l\'invio dei dati al server:', error);
+            });
+        }
+
+        // Funzione per salvare i dati localmente quando offline
+        function saveDataLocally(data) {
+            localStorage.setItem('dataToSend', JSON.stringify(data));
+        }
+
+        // Funzione per inviare i dati salvati quando la connessione è disponibile
+        function sendDataWhenOnline() {
+            if (navigator.onLine) {
+                const data = JSON.parse(localStorage.getItem('dataToSend'));
+                if (data) {
+                    sendDataToServer(data);  // Funzione per inviare i dati al server
+                    localStorage.removeItem('dataToSend');  // Rimuovi i dati dopo l'invio
+                }
+            }
+        }
+
+        // Ascolta l'evento 'online' per inviare i dati quando il dispositivo torna online
+        window.addEventListener('online', sendDataWhenOnline);
+
+        // Funzione di successo (quando la scansione del QR code è completata)
+        function success(result) {
+            document.getElementById('result').innerHTML = `
+                <h2>Successo!</h2>
+                <p><a href="${result}">${result}</a></p>
+            `;
+
+            // Salva i dati localmente se offline
+            const data = { qrResult: result };
+            if (navigator.onLine) {
+                sendDataToServer(data);
+            } else {
+                saveDataLocally(data);
+            }
+
+            // Pulisce il lettore QR dopo la scansione
+            scanner.clear();
+            document.getElementById('reader').remove();
+        }
+
+        // Funzione di errore
+        function error(err) {
+            console.error(err);
+        }
+
+        // Inizializza il lettore QR
+        const scanner = new Html5QrcodeScanner('reader', {
+            qrbox: { width: 250, height: 250 },
+            fps: 20,
+        });
+        scanner.render(success, error);
+    </script>
 </body>
 </html>
