@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code Scanner PWA</title>
     <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -86,11 +87,35 @@
         }
         
         #reader {
+            position: relative;
             width: 100%;
             margin: 20px 0;
-            border: 2px dashed #ddd;
-            border-radius: 5px;
             min-height: 300px;
+            background-color: #f0f0f0;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        #reader__dashboard_section_csr {
+            padding: 10px;
+            background: white;
+        }
+        
+        #reader__camera_permission_button {
+            background-color: #007bff !important;
+            color: white !important;
+            border: none !important;
+            padding: 10px 15px !important;
+            border-radius: 5px !important;
+            font-size: 16px !important;
+            margin: 10px auto !important;
+            display: block !important;
+            cursor: pointer !important;
+        }
+        
+        #reader__camera_permission_button:hover {
+            background-color: #0069d9 !important;
         }
         
         .status {
@@ -153,13 +178,31 @@
             background-color: #f0f0f0;
             border-radius: 5px;
         }
+        
+        .camera-fallback {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>QR Code Scanner</h2>
         
-        <div id="reader"></div>
+        <div id="reader">
+            <div id="reader__scan_region">
+                <div class="camera-fallback">
+                    <p>Attendere l'attivazione della fotocamera...</p>
+                    <p>Se non parte automaticamente, clicca sul pulsante qui sotto:</p>
+                </div>
+            </div>
+            <div id="reader__dashboard">
+                <div id="reader__dashboard_section_csr">
+                    <button id="reader__camera_permission_button">Attiva Fotocamera</button>
+                </div>
+            </div>
+        </div>
         
         <div id="connection-status" class="status disconnected">
             <span class="icon">⚠️</span> CONNESSIONE IN CORSO...
@@ -212,7 +255,7 @@
     </div>
 
     <!-- Includi la libreria QR Scanner -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
     
     <script>
         // Configurazione
@@ -229,6 +272,14 @@
         let isConnected = false;
         let scanner = null;
         
+        // Imposta logger dettagliato
+        Html5Qrcode.logger = {
+            debug: (msg) => logDebug('QR DEBUG: ' + msg),
+            error: (msg) => logDebug('QR ERROR: ' + msg),
+            warn: (msg) => logDebug('QR WARN: ' + msg),
+            info: (msg) => logDebug('QR INFO: ' + msg)
+        };
+        
         // Funzione di log per debug
         function logDebug(message) {
             const timestamp = new Date().toLocaleTimeString();
@@ -237,27 +288,76 @@
             console.log(message);
         }
         
+        // Verifica permessi fotocamera
+        function checkCameraPermissions() {
+            if (!navigator.permissions) {
+                logDebug("API Permissions non supportata");
+                return;
+            }
+            
+            navigator.permissions.query({ name: 'camera' }).then(permissionStatus => {
+                logDebug("Stato permesso fotocamera: " + permissionStatus.state);
+                
+                if (permissionStatus.state === 'denied') {
+                    alert("Permesso fotocamera negato. Per favore abilitalo nelle impostazioni del browser.");
+                }
+                
+                permissionStatus.onchange = () => {
+                    logDebug("Permesso fotocamera cambiato: " + permissionStatus.state);
+                    if (permissionStatus.state === 'granted') {
+                        initScanner();
+                    }
+                };
+            }).catch(error => {
+                logDebug("Errore verifica permessi: " + error);
+            });
+        }
+        
         // Inizializza lo scanner QR
         function initScanner() {
             if (scanner) return;
-            
+
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    startScanner();
+                } else {
+                    logDebug("Nessuna fotocamera rilevata");
+                    alert("Nessuna fotocamera disponibile!");
+                }
+            }).catch(err => {
+                logDebug("Errore accesso fotocamera: " + err);
+                alert("Errore nell'accesso alla fotocamera!");
+            });
+        }
+        
+        // Avvia lo scanner
+        function startScanner() {
             scanner = new Html5QrcodeScanner(
                 "reader", 
                 { 
                     qrbox: { width: 250, height: 250 },
                     fps: 10,
                     rememberLastUsedCamera: true,
-                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                    aspectRatio: 1.333333 // 4:3
                 },
-                /* verbose= */ false
+                false
             );
             
-            scanner.render(onScanSuccess, onScanFailure);
-            logDebug("Scanner QR inizializzato");
+            scanner.render(
+                decodedText => {
+                    onScanSuccess(decodedText);
+                    scanner.clear().catch(console.error);
+                },
+                error => {
+                    onScanFailure(error);
+                }
+            );
+            
+            logDebug("Scanner avviato correttamente");
         }
         
         // Callback scansione QR
-        function onScanSuccess(decodedText, decodedResult) {
+        function onScanSuccess(decodedText) {
             logDebug(`QR scannerizzato: ${decodedText}`);
             
             const parts = decodedText.split(";");
@@ -414,11 +514,11 @@
         // Inizializzazione
         window.addEventListener('load', () => {
             logDebug("Applicazione avviata");
+            checkCameraPermissions();
             initScanner();
             checkConnection();
             
-            // Verifica periodicamente la connessione
-            setInterval(checkConnection, 30000); // Ogni 30 secondi
+            setInterval(checkConnection, 30000);
         });
         
         // Service Worker per PWA
