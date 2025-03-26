@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -19,100 +19,194 @@
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
             display: inline-block;
             text-align: left;
+            max-width: 500px;
+            width: 100%;
         }
         label {
             font-weight: bold;
+            display: block;
+            margin-top: 10px;
         }
         input {
             display: block;
             width: 100%;
             padding: 8px;
-            margin: 5px 0;
+            margin: 5px 0 15px 0;
             border: 1px solid #ccc;
             border-radius: 5px;
+            box-sizing: border-box;
         }
         button {
             margin-top: 10px;
-            padding: 10px;
+            padding: 12px;
             width: 100%;
             border: none;
             background-color: #007bff;
             color: white;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #0056b3;
         }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
         #reader {
             width: 100%;
             max-width: 400px;
-            margin: auto;
+            margin: 0 auto 20px auto;
+        }
+        .connection-status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
         }
         .connected {
-            color: green;
+            background-color: #d4edda;
+            color: #155724;
         }
         .disconnected {
-            color: red;
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .status-icon {
+            margin-right: 8px;
         }
     </style>
 </head>
 <body>
     <main>
         <h2>QR Code Scanner</h2>
+        
         <div id="reader"></div>
-        <div id="connection-status" class="disconnected">NON CONNESSO</div>
-        <label>Data:</label> <input type="text" id="date" readonly>
-        <label>Orario:</label> <input type="text" id="time" readonly>
-        <label>Cliente:</label> <input type="text" id="text" maxlength="20" readonly>
-        <label>Cassa:</label> <input type="text" id="letter" maxlength="1" readonly>
-        <label>Table:</label> <input type="number" id="table" min="0" max="99">
-        <label>Note:</label> <input type="text" id="note" maxlength="30">
+        
+        <div id="connection-status" class="connection-status disconnected">
+            <span class="status-icon">✖</span> NON CONNESSO
+        </div>
+        
+        <label>Data:</label>
+        <input type="text" id="date" readonly>
+        
+        <label>Orario:</label>
+        <input type="text" id="time" readonly>
+        
+        <label>Cliente:</label>
+        <input type="text" id="text" maxlength="20" readonly>
+        
+        <label>Cassa:</label>
+        <input type="text" id="letter" maxlength="1" readonly>
+        
+        <label>Tavolo:</label>
+        <input type="number" id="table" min="0" max="99">
+        
+        <label>Note:</label>
+        <input type="text" id="note" maxlength="30">
+        
         <button id="sendData">Invia Dati</button>
         <button id="newScan">Nuova Scansione</button>
-        <label>Stringa da inviare:</label> <input type="text" id="output" readonly>
+        
+        <div id="loading">
+            <p>Invio dati in corso...</p>
+        </div>
+        
+        <label>Stringa generata:</label>
+        <input type="text" id="output" readonly>
     </main>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
     <script>
-        const serverUrl = 'http://192.168.178.53:3000/ricevi-dati';  // Modificato per usare la porta 3000
-
-        function checkConnection() {
-            fetch(serverUrl, { 
-                method: 'GET',
-                headers: { 'Content-Type': 'text/plain' },
-                mode: 'cors'  // Aggiunto per gestire CORS
-            })
-            .then(response => updateConnectionStatus(response.ok))
-            .catch(() => updateConnectionStatus(false));
+        // Configurazione
+        const serverUrl = 'http://192.168.178.53:5000/ricevi-dati';
+        const connectionCheckInterval = 5000; // 5 secondi
+        
+        // Elementi DOM
+        const connectionStatus = document.getElementById('connection-status');
+        const sendButton = document.getElementById('sendData');
+        const loadingIndicator = document.getElementById('loading');
+        const outputField = document.getElementById('output');
+        
+        // Stato connessione
+        let isConnected = false;
+        
+        // Funzione per verificare la connessione al server
+        async function checkConnection() {
+            try {
+                console.log("[DEBUG] Verifico connessione a:", serverUrl);
+                const response = await fetch(serverUrl, {
+                    method: 'OPTIONS',
+                    headers: { 'Content-Type': 'text/plain' },
+                    mode: 'cors'
+                });
+                
+                updateConnectionStatus(response.ok);
+                return response.ok;
+            } catch (error) {
+                console.error("[ERRORE] Connessione fallita:", error);
+                updateConnectionStatus(false);
+                return false;
+            }
         }
-
-        function updateConnectionStatus(isConnected) {
-            const statusElement = document.getElementById('connection-status');
-            statusElement.textContent = isConnected ? 'CONNESSO' : 'NON CONNESSO';
-            statusElement.classList.toggle('connected', isConnected);
-            statusElement.classList.toggle('disconnected', !isConnected);
+        
+        // Aggiorna lo stato della connessione nell'interfaccia
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            connectionStatus.className = connected ? 'connection-status connected' : 'connection-status disconnected';
+            connectionStatus.innerHTML = connected 
+                ? '<span class="status-icon">✓</span> CONNESSO AL SERVER' 
+                : '<span class="status-icon">✖</span> SERVER NON RAGGIUNGIBILE';
+            
+            sendButton.disabled = !connected;
         }
-
-        const scanner = new Html5QrcodeScanner('reader', { qrbox: { width: 250, height: 250 }, fps: 20 });
-        scanner.render(onScanSuccess, console.error);
-
+        
+        // Scanner QR Code
+        const scanner = new Html5QrcodeScanner('reader', { 
+            qrbox: { width: 250, height: 250 }, 
+            fps: 20,
+            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+        });
+        
+        scanner.render(onScanSuccess, onScanError);
+        
         function onScanSuccess(result) {
+            console.log("[DEBUG] QR Code scannerizzato:", result);
             const parts = result.split(";");
+            
             if (parts.length === 6 && parts[0] === "INI" && parts[5] === "END") {
                 document.getElementById("date").value = parts[1];
                 document.getElementById("time").value = parts[2];
                 document.getElementById("text").value = parts[3];
                 document.getElementById("letter").value = parts[4];
                 scanner.clear();
+                
+                // Auto-focus sul campo tavolo
+                document.getElementById("table").focus();
             } else {
-                alert("Formato QR code non valido");
+                alert("QR Code non valido! Formato atteso: INI;data;ora;cliente;cassa;END");
             }
         }
-
-        document.getElementById("sendData").addEventListener("click", function() {
-             // Aggiungi qui il console.log
-            console.log("Tentativo di connessione a:", serverUrl);
+        
+        function onScanError(error) {
+            console.warn("[WARN] Errore scanner:", error);
+        }
+        
+        // Invio dati al server
+        async function sendDataToServer() {
+            if (!isConnected) {
+                alert("Non connesso al server! Verifica la connessione di rete.");
+                return;
+            }
+            
             const date = document.getElementById("date").value;
             const time = document.getElementById("time").value;
             const text = document.getElementById("text").value;
@@ -120,50 +214,60 @@
             const table = document.getElementById("table").value.padStart(2, '0');
             const note = document.getElementById("note").value;
             
+            // Validazione
             if (!date || !time || !text || !letter || !table) {
                 alert("Compila tutti i campi obbligatori!");
                 return;
             }
             
             const dataString = `${date};${time};${text};${letter};${table};${note}`;
-            document.getElementById("output").value = dataString;
+            outputField.value = dataString;
             
-            // Invio dati al server con fetch modificato
-            fetch(serverUrl, {
-    method: "POST",
-    mode: "cors",
-    headers: { 
-        "Content-Type": "text/plain",
-        "Accept": "*/*"  // Aggiunto header Accept
-    },
-    body: dataString
-})
-.then(response => {
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.text();
-})
-.then(data => {
-    console.log("Risposta server:", data);
-    alert("Dati inviati con successo!");
-})
-.catch(error => {
-    console.error("Errore completo:", error);
-    alert(`Errore di rete: ${error.message}\n\nURL tentato: ${serverUrl}`);
-});
-    alert(`Errore di rete. Verifica:
-    1. Se il server è acceso (PC acceso)
-    2. Se l'IP è corretto
-    3. Se entrambi i dispositivi sono sulla stessa WiFi`);
-});
+            // Mostra indicatore di caricamento
+            sendButton.disabled = true;
+            loadingIndicator.style.display = 'block';
+            
+            try {
+                console.log("[DEBUG] Invio dati:", dataString);
+                
+                const response = await fetch(serverUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: dataString
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Errore server: ${response.status}`);
+                }
+                
+                const responseData = await response.text();
+                console.log("[DEBUG] Risposta server:", responseData);
+                alert("Dati inviati con successo!");
+                
+                // Resetta il form
+                document.getElementById("note").value = "";
+                
+            } catch (error) {
+                console.error("[ERRORE] Invio fallito:", error);
+                alert(`Errore nell'invio: ${error.message}\n\nVerifica:\n1. Connessione di rete\n2. Che il server sia attivo\n3. L'indirizzo IP (${serverUrl})`);
+            } finally {
+                // Nascondi indicatore di caricamento
+                loadingIndicator.style.display = 'none';
+                sendButton.disabled = !isConnected;
+            }
+        }
         
-
+        // Event listeners
+        document.getElementById("sendData").addEventListener("click", sendDataToServer);
+        
         document.getElementById("newScan").addEventListener("click", function() {
             location.reload();
         });
-
-        setInterval(checkConnection, 5000);
+        
+        // Controllo periodico della connessione
+        setInterval(checkConnection, connectionCheckInterval);
+        
+        // Verifica iniziale
         checkConnection();
     </script>
 </body>
