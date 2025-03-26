@@ -75,10 +75,14 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js" crossorigin="anonymous"></script>
     <script>
-        const serverUrl = 'http://192.168.178.53:5000/receive_data';
+        const serverUrl = 'http://192.168.178.53:3000/ricevi-dati';  // Modificato per usare la porta 3000
 
         function checkConnection() {
-            fetch(serverUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+            fetch(serverUrl, { 
+                method: 'GET',
+                headers: { 'Content-Type': 'text/plain' },
+                mode: 'cors'  // Aggiunto per gestire CORS
+            })
             .then(response => updateConnectionStatus(response.ok))
             .catch(() => updateConnectionStatus(false));
         }
@@ -122,14 +126,23 @@
             const dataString = `${date};${time};${text};${letter};${table};${note}`;
             document.getElementById("output").value = dataString;
             
+            // Invio dati al server con fetch modificato
             fetch(serverUrl, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ data: dataString })
+                headers: { "Content-Type": "text/plain" },  // Modificato per inviare testo semplice
+                body: dataString  // Inviamo la stringa direttamente, senza JSON
             })
-            .then(response => response.text())
-            .then(data => alert("Dati inviati con successo: " + data))
-            .catch(error => alert("Errore nell'invio dei dati: " + error));
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                }
+                throw new Error('Errore nel server');
+            })
+            .then(data => alert("Dati inviati con successo!"))
+            .catch(error => {
+                console.error("Errore:", error);
+                alert("Errore nell'invio dei dati: " + error.message);
+            });
         });
 
         document.getElementById("newScan").addEventListener("click", function() {
