@@ -130,9 +130,10 @@
             
             // Invio dati al server con fetch modificato
             fetch(serverUrl, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },  // Modificato per inviare testo semplice
-                body: dataString  // Inviamo la stringa direttamente, senza JSON
+            method: "POST",
+            mode: "cors",  // Aggiungi questa linea
+            headers: { "Content-Type": "text/plain" },
+            body: dataString
             })
             .then(response => {
                 if (response.ok) {
