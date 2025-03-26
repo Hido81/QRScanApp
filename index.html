@@ -6,23 +6,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code Scanner</title>
     <style>
-        main {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
             padding: 20px;
         }
+        main {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            text-align: left;
+        }
+        label {
+            font-weight: bold;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
         #reader {
-            width: 600px;
-        }
-        #result, #output {
-            text-align: center;
-            font-size: 1.5rem;
-        }
-        #connection-status {
-            margin-top: 20px;
-            font-size: 1.2rem;
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
         }
         .connected {
             color: green;
@@ -32,37 +57,30 @@
         }
     </style>
 </head>
-<body data-rsssl="1">
+<body>
     <main>
+        <h2>QR Code Scanner</h2>
         <div id="reader"></div>
-        <div id="result"></div>
         <div id="connection-status" class="disconnected">NON CONNESSO</div>
-        <label>Data:</label> <input type="text" id="date" readonly><br>
-        <label>Orario:</label> <input type="text" id="time" readonly><br>
-        <label>Testo:</label> <input type="text" id="text" maxlength="20" readonly><br>
-        <label>Lettera:</label> <input type="text" id="letter" maxlength="1" readonly><br>
-        <label>TABLE:</label> <input type="text" id="table" maxlength="10"><br>
+        <label>Data:</label> <input type="text" id="date" readonly>
+        <label>Orario:</label> <input type="text" id="time" readonly>
+        <label>Cliente:</label> <input type="text" id="text" maxlength="20" readonly>
+        <label>Cassa:</label> <input type="text" id="letter" maxlength="1" readonly>
+        <label>Table:</label> <input type="number" id="table" min="0" max="99">
+        <label>Note:</label> <input type="text" id="note" maxlength="30">
         <button id="sendData">Invia Dati</button>
-        <button id="newScan">New Scan</button>
-        <br>
-        <label>Stringa da inviare:</label> <input type="text" id="output" readonly><br>
+        <button id="newScan">Nuova Scansione</button>
+        <label>Stringa da inviare:</label> <input type="text" id="output" readonly>
     </main>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js" integrity="sha512-k/KAe4Yff9EUdYI5/IAHlwUswqeipP+Cp5qnrsUjTPCgl51La2/JhyyjNciztD7mWNKLSXci48m7cctATKfLlQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js" crossorigin="anonymous"></script>
     <script>
         const serverUrl = 'http://192.168.178.53:5000/receive_data';
 
         function checkConnection() {
-            fetch(serverUrl, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => {
-                updateConnectionStatus(response.ok);
-            })
-            .catch(() => {
-                updateConnectionStatus(false);
-            });
+            fetch(serverUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+            .then(response => updateConnectionStatus(response.ok))
+            .catch(() => updateConnectionStatus(false));
         }
 
         function updateConnectionStatus(isConnected) {
@@ -93,14 +111,15 @@
             const time = document.getElementById("time").value;
             const text = document.getElementById("text").value;
             const letter = document.getElementById("letter").value;
-            const table = document.getElementById("table").value;
+            const table = document.getElementById("table").value.padStart(2, '0');
+            const note = document.getElementById("note").value;
             
             if (!date || !time || !text || !letter || !table) {
-                alert("Compila tutti i campi!");
+                alert("Compila tutti i campi obbligatori!");
                 return;
             }
             
-            const dataString = `${date};${time};${text};${letter};${table}`;
+            const dataString = `${date};${time};${text};${letter};${table};${note}`;
             document.getElementById("output").value = dataString;
             
             fetch(serverUrl, {
