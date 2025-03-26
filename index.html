@@ -143,9 +143,16 @@
             })
             .then(data => alert("Dati inviati con successo!"))
             .catch(error => {
-                console.error("Errore:", error);
-                alert("Errore nell'invio dei dati: " + error.message);
-            });
+    console.error("Dettaglio errore:", {
+        errorName: error.name,
+        errorMessage: error.message,
+        stack: error.stack
+    });
+    alert(`Errore di rete. Verifica:
+    1. Se il server è acceso (PC acceso)
+    2. Se l'IP è corretto
+    3. Se entrambi i dispositivi sono sulla stessa WiFi`);
+});
         });
 
         document.getElementById("newScan").addEventListener("click", function() {
