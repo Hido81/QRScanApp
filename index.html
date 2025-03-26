@@ -1,57 +1,385 @@
-// Configurazione
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-MAsBPFZ6Em60caPkTVO5QAaYBeyQD306EydKvtzgxNrOZYNRGUUvidbqI09EqYQ_xg/exec";
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner PWA</title>
+    <meta name="theme-color" content="#007bff">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #343a40;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        
+        h2 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        input:read-only {
+            background-color: #f5f5f5;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #0069d9;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #reader {
+            width: 100%;
+            margin: 20px 0;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            min-height: 300px;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .icon {
+            margin-right: 8px;
+        }
+        
+        #output {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>QR Code Scanner</h2>
+        
+        <div id="reader"></div>
+        
+        <div id="connection-status" class="status disconnected">
+            <span class="icon">⚠️</span> CONNESSIONE IN CORSO...
+        </div>
+        
+        <div class="form-group">
+            <label for="date">Data:</label>
+            <input type="text" id="date" readonly>
+        </div>
+        
+        <div class="form-group">
+            <label for="time">Orario:</label>
+            <input type="text" id="time" readonly>
+        </div>
+        
+        <div class="form-group">
+            <label for="text">Cliente:</label>
+            <input type="text" id="text" maxlength="20" readonly>
+        </div>
+        
+        <div class="form-group">
+            <label for="letter">Cassa:</label>
+            <input type="text" id="letter" maxlength="1" readonly>
+        </div>
+        
+        <div class="form-group">
+            <label for="table">Tavolo:</label>
+            <input type="number" id="table" min="0" max="99">
+        </div>
+        
+        <div class="form-group">
+            <label for="note">Note:</label>
+            <input type="text" id="note" maxlength="30" placeholder="Massimo 30 caratteri">
+        </div>
+        
+        <button id="sendData" disabled>INVIA DATI</button>
+        <button id="newScan">NUOVA SCANSIONE</button>
+        
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Invio dati in corso...</p>
+        </div>
+        
+        <div class="form-group">
+            <label for="output">Stringa generata:</label>
+            <div id="output"></div>
+        </div>
+    </div>
 
-// Funzione principale per l'invio
-async function inviaDati() {
-  const date = document.getElementById("date").value;
-  const time = document.getElementById("time").value;
-  const text = document.getElementById("text").value;
-  const letter = document.getElementById("letter").value;
-  const table = document.getElementById("table").value.padStart(2, '0');
-  const note = document.getElementById("note").value;
-  
-  const dataString = `${date};${time};${text};${letter};${table};${note}`;
-  
-  try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: dataString
-    });
+    <!-- Includi la libreria QR Scanner -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
     
-    const result = await response.json();
-    
-    if (result.status === 'success') {
-      alert('Dati salvati con successo!');
-      document.getElementById("note").value = ""; // Resetta solo le note
-    } else {
-      throw new Error(result.message);
-    }
-    
-  } catch (error) {
-    console.error("Errore:", error);
-    alert(`Errore nell'invio: ${error.message}`);
-  }
-}
-
-// Collega il bottone
-document.getElementById("sendData").addEventListener("click", inviaDati);
-
-// Funzionalità QR Scanner (rimane identica)
-const scanner = new Html5QrcodeScanner('reader', { 
-  qrbox: { width: 250, height: 250 }, 
-  fps: 10 
-});
-
-scanner.render(onScanSuccess, console.error);
-
-function onScanSuccess(result) {
-  const parts = result.split(";");
-  if (parts.length === 6 && parts[0] === "INI" && parts[5] === "END") {
-    document.getElementById("date").value = parts[1];
-    document.getElementById("time").value = parts[2];
-    document.getElementById("text").value = parts[3];
-    document.getElementById("letter").value = parts[4];
-    scanner.clear();
-  }
-}
+    <script>
+        // Configurazione
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-MAsBPFZ6Em60caPkTVO5QAaYBeyQD306EydKvtzgxNrOZYNRGUUvidbqI09EqYQ_xg/exec"; // SOSTITUISCI CON IL TUO URL
+        
+        // Elementi DOM
+        const connectionStatus = document.getElementById('connection-status');
+        const sendButton = document.getElementById('sendData');
+        const loadingIndicator = document.getElementById('loading');
+        const outputField = document.getElementById('output');
+        
+        // Stato applicazione
+        let isConnected = false;
+        let scannerInitialized = false;
+        
+        // Inizializza lo scanner QR
+        function initScanner() {
+            if (scannerInitialized) return;
+            
+            const html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", 
+                { 
+                    qrbox: { width: 250, height: 250 },
+                    fps: 10,
+                    rememberLastUsedCamera: true
+                },
+                false
+            );
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            scannerInitialized = true;
+        }
+        
+        // Callback scansione QR
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Scan result: ${decodedText}`, decodedResult);
+            
+            const parts = decodedText.split(";");
+            if (parts.length === 6 && parts[0] === "INI" && parts[5] === "END") {
+                document.getElementById("date").value = parts[1];
+                document.getElementById("time").value = parts[2];
+                document.getElementById("text").value = parts[3];
+                document.getElementById("letter").value = parts[4];
+                
+                // Auto-focus sul campo tavolo
+                setTimeout(() => {
+                    document.getElementById("table").focus();
+                }, 100);
+            } else {
+                alert("Formato QR non valido!\n\nAtteso: INI;data;ora;cliente;cassa;END");
+            }
+        }
+        
+        function onScanFailure(error) {
+            console.warn(`QR error: ${error}`);
+        }
+        
+        // Verifica connessione al server
+        async function checkConnection() {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: 'test;connection;check'
+                });
+                
+                updateConnectionStatus(true);
+                return true;
+            } catch (error) {
+                console.error("Connection check failed:", error);
+                updateConnectionStatus(false);
+                return false;
+            }
+        }
+        
+        // Aggiorna lo stato della connessione
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            connectionStatus.className = connected ? 'status connected' : 'status disconnected';
+            connectionStatus.innerHTML = connected 
+                ? '<span class="icon">✓</span> CONNESSO AL SERVER' 
+                : '<span class="icon">✖</span> SERVER NON RAGGIUNGIBILE';
+            
+            sendButton.disabled = !connected;
+        }
+        
+        // Invia dati al server
+        async function sendData() {
+            if (!isConnected) {
+                alert("Non connesso al server! Verifica la connessione internet.");
+                return;
+            }
+            
+            const date = document.getElementById("date").value;
+            const time = document.getElementById("time").value;
+            const text = document.getElementById("text").value;
+            const letter = document.getElementById("letter").value;
+            const table = document.getElementById("table").value.padStart(2, '0');
+            const note = document.getElementById("note").value;
+            
+            // Validazione
+            if (!date || !time || !text || !letter || !table) {
+                alert("Compila tutti i campi obbligatori!");
+                return;
+            }
+            
+            const dataString = `${date};${time};${text};${letter};${table};${note}`;
+            outputField.textContent = dataString;
+            
+            // Mostra indicatore di caricamento
+            sendButton.disabled = true;
+            loadingIndicator.style.display = 'block';
+            
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: dataString
+                });
+                
+                const result = await response.text();
+                console.log("Server response:", result);
+                
+                if (result.includes('success')) {
+                    alert("Dati inviati con successo!");
+                    document.getElementById("note").value = ""; // Resetta le note
+                } else {
+                    throw new Error(result);
+                }
+            } catch (error) {
+                console.error("Send error:", error);
+                alert(`Errore nell'invio:\n${error.message}`);
+            } finally {
+                loadingIndicator.style.display = 'none';
+                sendButton.disabled = !isConnected;
+            }
+        }
+        
+        // Event Listeners
+        document.getElementById("sendData").addEventListener("click", sendData);
+        document.getElementById("newScan").addEventListener("click", () => {
+            location.reload();
+        });
+        
+        // Controlla lo stato dei campi per abilitare il pulsante
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                const date = document.getElementById("date").value;
+                const time = document.getElementById("time").value;
+                const text = document.getElementById("text").value;
+                const letter = document.getElementById("letter").value;
+                const table = document.getElementById("table").value;
+                
+                sendButton.disabled = !(date && time && text && letter && table && isConnected);
+            });
+        });
+        
+        // Inizializzazione
+        window.addEventListener('load', () => {
+            initScanner();
+            checkConnection();
+            
+            // Verifica periodicamente la connessione
+            setInterval(checkConnection, 30000); // Ogni 30 secondi
+        });
+        
+        // Service Worker per PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registrato con successo:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Registrazione ServiceWorker fallita:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
