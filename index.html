@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner PWA</title>
+    <title>Gestione Tavoli Sagra</title>
     <meta name="theme-color" content="#007bff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
@@ -34,10 +34,17 @@
             border-radius: 10px;
         }
         
-        h2 {
+        h1 {
             color: var(--primary);
             text-align: center;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
             margin-bottom: 25px;
+            font-size: 14px;
         }
         
         .form-group {
@@ -161,24 +168,6 @@
             margin-right: 8px;
         }
         
-        #output {
-            font-family: monospace;
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 15px;
-            word-break: break-all;
-        }
-        
-        .debug-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-        }
-        
         .camera-fallback {
             text-align: center;
             padding: 20px;
@@ -188,7 +177,8 @@
 </head>
 <body>
     <div class="container">
-        <h2>QR Code Scanner</h2>
+        <h1>Gestione Tavoli Sagra</h1>
+        <div class="subtitle">by Marco Idolazzi</div>
         
         <div id="reader">
             <div id="reader__scan_region">
@@ -204,8 +194,8 @@
             </div>
         </div>
         
-        <div id="connection-status" class="status disconnected">
-            <span class="icon">⚠️</span> CONNESSIONE IN CORSO...
+        <div id="connection-status" class="status connected">
+            <span class="icon">✓</span> PRONTO ALL'USO
         </div>
         
         <div class="form-group">
@@ -229,8 +219,8 @@
         </div>
         
         <div class="form-group">
-            <label for="table">Tavolo:</label>
-            <input type="number" id="table" min="0" max="99" required>
+            <label for="table">Tavolo (2 cifre):</label>
+            <input type="number" id="table" min="1" max="99" required placeholder="Inserisci numero tavolo (01-99)">
         </div>
         
         <div class="form-group">
@@ -238,20 +228,13 @@
             <input type="text" id="note" maxlength="30" placeholder="Massimo 30 caratteri">
         </div>
         
-        <button id="sendData" disabled>INVIA DATI</button>
+        <button id="sendData">INVIA DATI</button>
         <button id="newScan">NUOVA SCANSIONE</button>
         
         <div id="loading">
             <div class="spinner"></div>
             <p>Invio dati in corso...</p>
         </div>
-        
-        <div class="form-group">
-            <label for="output">Stringa generata:</label>
-            <div id="output"></div>
-        </div>
-        
-        <div class="debug-info" id="debug-console"></div>
     </div>
 
     <!-- Includi la libreria QR Scanner -->
@@ -262,56 +245,9 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTgd7RKOVIgZl237ZcVqfLhS5VUp5s79Weixe-FQUHHxuF4BjR7GkVK5pdBNh6NxHhBw/exec";
         
         // Elementi DOM
-        const connectionStatus = document.getElementById('connection-status');
         const sendButton = document.getElementById('sendData');
         const loadingIndicator = document.getElementById('loading');
-        const outputField = document.getElementById('output');
-        const debugConsole = document.getElementById('debug-console');
-        
-        // Stato applicazione
-        let isConnected = false;
         let scanner = null;
-        
-        // Imposta logger dettagliato
-        Html5Qrcode.logger = {
-            debug: (msg) => logDebug('QR DEBUG: ' + msg),
-            error: (msg) => logDebug('QR ERROR: ' + msg),
-            warn: (msg) => logDebug('QR WARN: ' + msg),
-            info: (msg) => logDebug('QR INFO: ' + msg)
-        };
-        
-        // Funzione di log per debug
-        function logDebug(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            debugConsole.innerHTML += `[${timestamp}] ${message}<br>`;
-            debugConsole.scrollTop = debugConsole.scrollHeight;
-            console.log(message);
-        }
-        
-        // Verifica permessi fotocamera
-        function checkCameraPermissions() {
-            if (!navigator.permissions) {
-                logDebug("API Permissions non supportata");
-                return;
-            }
-            
-            navigator.permissions.query({ name: 'camera' }).then(permissionStatus => {
-                logDebug("Stato permesso fotocamera: " + permissionStatus.state);
-                
-                if (permissionStatus.state === 'denied') {
-                    alert("Permesso fotocamera negato. Per favore abilitalo nelle impostazioni del browser.");
-                }
-                
-                permissionStatus.onchange = () => {
-                    logDebug("Permesso fotocamera cambiato: " + permissionStatus.state);
-                    if (permissionStatus.state === 'granted') {
-                        initScanner();
-                    }
-                };
-            }).catch(error => {
-                logDebug("Errore verifica permessi: " + error);
-            });
-        }
         
         // Inizializza lo scanner QR
         function initScanner() {
@@ -321,11 +257,9 @@
                 if (devices && devices.length) {
                     startScanner();
                 } else {
-                    logDebug("Nessuna fotocamera rilevata");
                     alert("Nessuna fotocamera disponibile!");
                 }
             }).catch(err => {
-                logDebug("Errore accesso fotocamera: " + err);
                 alert("Errore nell'accesso alla fotocamera!");
             });
         }
@@ -338,7 +272,7 @@
                     qrbox: { width: 250, height: 250 },
                     fps: 10,
                     rememberLastUsedCamera: true,
-                    aspectRatio: 1.333333 // 4:3
+                    aspectRatio: 1.333333
                 },
                 false
             );
@@ -349,106 +283,49 @@
                     scanner.clear().catch(console.error);
                 },
                 error => {
-                    onScanFailure(error);
+                    console.error("Errore scanner:", error);
                 }
             );
-            
-            logDebug("Scanner avviato correttamente");
         }
         
         // Callback scansione QR
         function onScanSuccess(decodedText) {
-            logDebug(`QR scannerizzato: ${decodedText}`);
-            
             const parts = decodedText.split(";");
             if (parts.length === 6 && parts[0] === "INI" && parts[5] === "END") {
                 document.getElementById("date").value = parts[1];
                 document.getElementById("time").value = parts[2];
                 document.getElementById("text").value = parts[3];
                 document.getElementById("letter").value = parts[4];
-                
-                // Auto-focus sul campo tavolo
-                setTimeout(() => {
-                    document.getElementById("table").focus();
-                }, 100);
-                
-                logDebug("Dati QR importati correttamente");
+                document.getElementById("table").focus();
             } else {
-                const errorMsg = "Formato QR non valido! Atteso: INI;data;ora;cliente;cassa;END";
-                alert(errorMsg);
-                logDebug(errorMsg);
+                alert("Formato QR non valido! Atteso: INI;data;ora;cliente;cassa;END");
             }
-        }
-        
-        function onScanFailure(error) {
-            logDebug(`Errore scanner: ${error}`);
-        }
-        
-        // Verifica connessione al server
-        async function checkConnection() {
-            try {
-                logDebug("Verifica connessione al server...");
-                const testData = "test;connection;check;X;00;debug";
-                
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: testData
-                });
-                
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const result = await response.json();
-                logDebug(`Test connessione: ${result.status} - ${result.message}`);
-                
-                updateConnectionStatus(true);
-                return true;
-            } catch (error) {
-                logDebug(`Errore connessione: ${error.message}`);
-                updateConnectionStatus(false);
-                return false;
-            }
-        }
-        
-        // Aggiorna lo stato della connessione
-        function updateConnectionStatus(connected) {
-            isConnected = connected;
-            connectionStatus.className = connected ? 'status connected' : 'status disconnected';
-            connectionStatus.innerHTML = connected 
-                ? '<span class="icon">✓</span> CONNESSO AL SERVER' 
-                : '<span class="icon">✖</span> SERVER NON RAGGIUNGIBILE';
-            
-            sendButton.disabled = !connected;
-            logDebug(`Stato connessione: ${connected ? 'CONNESSO' : 'DISCONNESSO'}`);
         }
         
         // Invia dati al server
         async function sendData() {
+            const table = document.getElementById("table").value;
+            
+            // Validazione campo tavolo
+            if (!table || table < 1 || table > 99) {
+                alert("Inserisci un numero tavolo valido (da 01 a 99)");
+                return;
+            }
+            
+            const tableFormatted = String(table).padStart(2, '0');
             const date = document.getElementById("date").value;
             const time = document.getElementById("time").value;
             const text = document.getElementById("text").value;
             const letter = document.getElementById("letter").value;
-            const table = document.getElementById("table").value.padStart(2, '0');
             const note = document.getElementById("note").value;
             
-            // Validazione
-            if (!date || !time || !text || !letter || !table) {
-                const errorMsg = "Compila tutti i campi obbligatori!";
-                alert(errorMsg);
-                logDebug(errorMsg);
-                return;
-            }
-            
-            const dataString = `${date};${time};${text};${letter};${table};${note}`;
-            outputField.textContent = dataString;
+            const dataString = `${date};${time};${text};${letter};${tableFormatted};${note}`;
             
             // Mostra indicatore di caricamento
             sendButton.disabled = true;
             loadingIndicator.style.display = 'block';
-            logDebug(`Invio dati: ${dataString}`);
             
             try {
-                const startTime = Date.now();
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
@@ -456,81 +333,63 @@
                 });
                 
                 const result = await response.json();
-                const duration = Date.now() - startTime;
-                
-                logDebug(`Risposta server (${duration}ms): ${JSON.stringify(result)}`);
                 
                 if (result.status === 'success') {
-                    alert(`Dati salvati con successo! Riga: ${result.row}`);
-                    resetForm();
+                    // Resetta tutti i campi dopo l'invio
+                    document.getElementById("date").value = "";
+                    document.getElementById("time").value = "";
+                    document.getElementById("text").value = "";
+                    document.getElementById("letter").value = "";
+                    document.getElementById("table").value = "";
+                    document.getElementById("note").value = "";
+                    
+                    alert("Dati salvati con successo!");
+                    initScanner(); // Prepara per nuova scansione
                 } else {
-                    throw new Error(result.message || "Errore sconosciuto dal server");
+                    throw new Error(result.message || "Errore nel salvataggio");
                 }
             } catch (error) {
-                const errorMsg = `Errore nell'invio: ${error.message}`;
-                alert(errorMsg);
-                logDebug(errorMsg);
+                alert(`Errore nell'invio: ${error.message}`);
             } finally {
                 loadingIndicator.style.display = 'none';
-                sendButton.disabled = !isConnected;
+                sendButton.disabled = false;
             }
         }
         
-        // Resetta il form dopo l'invio
-        function resetForm() {
-            document.getElementById("note").value = "";
-            document.getElementById("table").value = "";
-            outputField.textContent = "";
-            logDebug("Form resettato");
-        }
-        
-        // Controlla la validità del form
-        function checkFormValidity() {
-            const date = document.getElementById("date").value;
-            const time = document.getElementById("time").value;
-            const text = document.getElementById("text").value;
-            const letter = document.getElementById("letter").value;
-            const table = document.getElementById("table").value;
+        // Controlla la validità del campo tavolo
+        function checkTableInput() {
+            const tableInput = document.getElementById("table");
+            let value = tableInput.value;
             
-            const isValid = date && time && text && letter && table;
-            sendButton.disabled = !isValid || !isConnected;
+            // Limita a 2 cifre
+            if (value.length > 2) {
+                value = value.slice(0, 2);
+                tableInput.value = value;
+            }
             
-            if (!isValid) {
-                logDebug("Form incompleto - pulsante disabilitato");
+            // Impedisce valori non numerici
+            if (isNaN(value)) {
+                tableInput.value = value.replace(/[^0-9]/g, '');
             }
         }
         
         // Event Listeners
         document.getElementById("sendData").addEventListener("click", sendData);
         document.getElementById("newScan").addEventListener("click", () => {
-            logDebug("Nuova scansione richiesta");
             location.reload();
         });
         
-        document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', checkFormValidity);
-        });
+        document.getElementById("table").addEventListener("input", checkTableInput);
         
         // Inizializzazione
         window.addEventListener('load', () => {
-            logDebug("Applicazione avviata");
-            checkCameraPermissions();
             initScanner();
-            checkConnection();
-            
-            setInterval(checkConnection, 30000);
         });
         
         // Service Worker per PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => {
-                        logDebug(`ServiceWorker registrato: ${registration.scope}`);
-                    })
-                    .catch(error => {
-                        logDebug(`Registrazione ServiceWorker fallita: ${error}`);
-                    });
+                navigator.serviceWorker.register('sw.js');
             });
         }
     </script>
