@@ -173,6 +173,53 @@
             padding: 20px;
             color: #666;
         }
+        
+        .square-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .square-box {
+            flex: 1;
+            aspect-ratio: 1/1;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .square-label {
+            background-color: #f0f0f0;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .square-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        
+        .table-number {
+            font-size: 72px;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .notes-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 10px;
+            resize: none;
+            font-family: inherit;
+        }
     </style>
 </head>
 <body>
@@ -218,14 +265,21 @@
             <input type="text" id="letter" maxlength="1" readonly>
         </div>
         
-        <div class="form-group">
-            <label for="table">Tavolo (2 cifre):</label>
-            <input type="number" id="table" min="1" max="99" required placeholder="Inserisci numero tavolo (01-99)">
-        </div>
-        
-        <div class="form-group">
-            <label for="note">Note:</label>
-            <input type="text" id="note" maxlength="30" placeholder="Massimo 30 caratteri">
+        <div class="square-container">
+            <div class="square-box">
+                <div class="square-label">Tavolo</div>
+                <div class="square-content">
+                    <input type="number" id="table" class="table-number" min="1" max="99" required 
+                           placeholder="Nr" oninput="formatTableNumber()">
+                </div>
+            </div>
+            <div class="square-box">
+                <div class="square-label">Note</div>
+                <div class="square-content">
+                    <textarea id="note" class="notes-input" maxlength="30" 
+                              placeholder="Scrivi qui"></textarea>
+                </div>
+            </div>
         </div>
         
         <button id="sendData">INVIA DATI</button>
@@ -248,6 +302,39 @@
         const sendButton = document.getElementById('sendData');
         const loadingIndicator = document.getElementById('loading');
         let scanner = null;
+        
+        // Formatta il numero del tavolo a 2 cifre
+        function formatTableNumber() {
+            const tableInput = document.getElementById("table");
+            let value = tableInput.value;
+            
+            // Limita a 2 cifre
+            if (value.length > 2) {
+                value = value.slice(0, 2);
+                tableInput.value = value;
+            }
+            
+            // Impedisce valori non numerici
+            if (isNaN(value)) {
+                tableInput.value = value.replace(/[^0-9]/g, '');
+            }
+            
+            // Aggiorna il display
+            if (value) {
+                tableInput.value = String(value).padStart(2, '0');
+            }
+        }
+        
+        // Verifica se tutti i campi obbligatori sono compilati
+        function checkRequiredFields() {
+            const date = document.getElementById("date").value;
+            const time = document.getElementById("time").value;
+            const text = document.getElementById("text").value;
+            const letter = document.getElementById("letter").value;
+            const table = document.getElementById("table").value;
+            
+            return date && time && text && letter && table;
+        }
         
         // Inizializza lo scanner QR
         function initScanner() {
@@ -304,6 +391,12 @@
         
         // Invia dati al server
         async function sendData() {
+            // Verifica tutti i campi obbligatori
+            if (!checkRequiredFields()) {
+                alert("Compila tutti i campi obbligatori (Data, Orario, Cliente, Cassa e Tavolo)");
+                return;
+            }
+            
             const table = document.getElementById("table").value;
             
             // Validazione campo tavolo
@@ -356,30 +449,13 @@
             }
         }
         
-        // Controlla la validità del campo tavolo
-        function checkTableInput() {
-            const tableInput = document.getElementById("table");
-            let value = tableInput.value;
-            
-            // Limita a 2 cifre
-            if (value.length > 2) {
-                value = value.slice(0, 2);
-                tableInput.value = value;
-            }
-            
-            // Impedisce valori non numerici
-            if (isNaN(value)) {
-                tableInput.value = value.replace(/[^0-9]/g, '');
-            }
-        }
-        
         // Event Listeners
         document.getElementById("sendData").addEventListener("click", sendData);
         document.getElementById("newScan").addEventListener("click", () => {
             location.reload();
         });
         
-        document.getElementById("table").addEventListener("input", checkTableInput);
+        document.getElementById("table").addEventListener("input", formatTableNumber);
         
         // Inizializzazione
         window.addEventListener('load', () => {
