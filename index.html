@@ -210,6 +210,12 @@
             font-weight: bold;
             text-align: center;
             width: 100%;
+            border: none;
+            background: transparent;
+        }
+        
+        .table-number:focus {
+            outline: none;
         }
         
         .notes-input {
@@ -219,6 +225,10 @@
             padding: 10px;
             resize: none;
             font-family: inherit;
+        }
+        
+        .notes-input:focus {
+            outline: none;
         }
     </style>
 </head>
@@ -270,13 +280,13 @@
                 <div class="square-label">Tavolo</div>
                 <div class="square-content">
                     <input type="number" id="table" class="table-number" min="1" max="99" required 
-                           placeholder="Nr" oninput="formatTableNumber()">
+                           placeholder="Nr" oninput="formatTableNumber(this)">
                 </div>
             </div>
             <div class="square-box">
-                <div class="square-label">Note</div>
+                <div class="square-label">Note (max 50 caratteri)</div>
                 <div class="square-content">
-                    <textarea id="note" class="notes-input" maxlength="30" 
+                    <textarea id="note" class="notes-input" maxlength="50" 
                               placeholder="Scrivi qui"></textarea>
                 </div>
             </div>
@@ -304,24 +314,25 @@
         let scanner = null;
         
         // Formatta il numero del tavolo a 2 cifre
-        function formatTableNumber() {
-            const tableInput = document.getElementById("table");
-            let value = tableInput.value;
+        function formatTableNumber(input) {
+            let value = input.value;
+            
+            // Rimuovi caratteri non numerici
+            value = value.replace(/[^0-9]/g, '');
             
             // Limita a 2 cifre
             if (value.length > 2) {
                 value = value.slice(0, 2);
-                tableInput.value = value;
             }
             
-            // Impedisce valori non numerici
-            if (isNaN(value)) {
-                tableInput.value = value.replace(/[^0-9]/g, '');
-            }
+            // Aggiorna il valore
+            input.value = value;
             
-            // Aggiorna il display
-            if (value) {
-                tableInput.value = String(value).padStart(2, '0');
+            // Se il valore è vuoto, mostra il placeholder
+            if (!value) {
+                input.placeholder = "Nr";
+            } else {
+                input.placeholder = "";
             }
         }
         
@@ -435,6 +446,7 @@
                     document.getElementById("letter").value = "";
                     document.getElementById("table").value = "";
                     document.getElementById("note").value = "";
+                    document.getElementById("table").placeholder = "Nr";
                     
                     alert("Dati salvati con successo!");
                     initScanner(); // Prepara per nuova scansione
@@ -454,8 +466,6 @@
         document.getElementById("newScan").addEventListener("click", () => {
             location.reload();
         });
-        
-        document.getElementById("table").addEventListener("input", formatTableNumber);
         
         // Inizializzazione
         window.addEventListener('load', () => {
