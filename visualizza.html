@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Visualizzazione Dati</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <h1>Dati Ricevuti</h1>
+    <table id="datiTable">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Data</th>
+                <th>Ora</th>
+                <th>Cliente</th>
+                <th>Cassa</th>
+                <th>Tavolo</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        // Sostituisci con l'URL del tuo foglio Google pubblicato come CSV
+        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1LJz73WWQmNkPEkVLGnvWAHnEVZnogIkqo6Fea9EJXW8/edit?usp=sharing";
+        
+        async function caricaDati() {
+            const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(SHEET_CSV_URL)}`);
+            const text = await response.json();
+            
+            const rows = text.contents.trim().split('\n').slice(1); // Salta l'header
+            const tableBody = document.querySelector('#datiTable tbody');
+            
+            rows.forEach(row => {
+                const cols = row.split(',');
+                const tr = document.createElement('tr');
+                
+                cols.forEach(col => {
+                    const td = document.createElement('td');
+                    td.textContent = col.replace(/"/g, '');
+                    tr.appendChild(td);
+                });
+                
+                tableBody.appendChild(tr);
+            });
+        }
+        
+        caricaDati();
+        setInterval(caricaDati, 30000); // Aggiorna ogni 30 secondi
+    </script>
+</body>
+</html>
