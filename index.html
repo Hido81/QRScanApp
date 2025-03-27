@@ -34,6 +34,10 @@
             border-radius: 10px;
         }
         
+        .scroll-target {
+            scroll-margin-top: 20px;
+        }
+        
         h1 {
             color: var(--primary);
             text-align: center;
@@ -234,8 +238,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>Gestione Tavoli Sagra</h1>
-        <div class="subtitle">by Marco Idolazzi</div>
+        <div id="header" class="scroll-target">
+            <h1>Gestione Tavoli Sagra</h1>
+            <div class="subtitle">by Marco Idolazzi</div>
+        </div>
         
         <div id="reader">
             <div id="reader__scan_region">
@@ -284,7 +290,7 @@
                 </div>
             </div>
             <div class="square-box">
-                <div class="square-label">Note (max 50 car)</div>
+                <div class="square-label">Note (max 50 caratteri)</div>
                 <div class="square-content">
                     <textarea id="note" class="notes-input" maxlength="50" 
                               placeholder="Scrivi qui"></textarea>
@@ -464,7 +470,15 @@
         // Event Listeners
         document.getElementById("sendData").addEventListener("click", sendData);
         document.getElementById("newScan").addEventListener("click", () => {
-            location.reload();
+            // Scroll verso l'alto al titolo
+            document.getElementById('header').scrollIntoView({
+                behavior: 'smooth'
+            });
+            
+            // Ricarica dopo un breve ritardo per permettere lo scroll
+            setTimeout(() => {
+                location.reload();
+            }, 500);
         });
         
         // Inizializzazione
