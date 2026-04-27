@@ -30,8 +30,8 @@
 
     <script>
         // Sostituisci con l'URL del tuo foglio Google pubblicato come CSV
-        //const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1LJz73WWQmNkPEkVLGnvWAHnEVZnogIkqo6Fea9EJXW8/edit?usp=sharing";
-        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1WU0DRpL6JUFJnjkj0RQToNe-wucd9eEMYDWMu3ezRrU/edit?usp=sharing";
+        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQsOtUxMY5RlTDkj3rpBKECxQh4a26m1-IbxmyIpwRDYy4DNib3i0ODsIW-wNDcMisTP5lUTtF9FyQc/pub?gid=0&single=true&output=csv";
+       
         async function caricaDati() {
             const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(SHEET_CSV_URL)}`);
             const text = await response.json();
