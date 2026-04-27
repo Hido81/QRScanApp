@@ -297,13 +297,14 @@
     }
 
     function pulisciCampi() {
-        document.getElementById("date").value = "";
-        document.getElementById("time").value = "";
-        document.getElementById("client").value = "";
-        document.getElementById("cashdesk").value = "";
-        document.getElementById("table").value = "";
-        document.getElementById("note").value = "";
-    }
+    document.getElementById("date").value = "";
+    document.getElementById("time").value = "";
+    document.getElementById("client").value = "";
+    document.getElementById("cashdesk").value = "";
+    document.getElementById("table").value = "";
+    document.getElementById("note").value = "";
+    lastQrRawText = "";
+}
 
     function validaNumeroTavolo() {
         const tableValue = document.getElementById("table").value.trim();
@@ -338,31 +339,34 @@
     }
 
     function onScanSuccess(decodedText) {
-        console.log("QR letto:", decodedText);
+    console.log("QR letto:", decodedText);
 
-        const parts = decodedText.split(";");
+    const qrText = decodedText.trim();
+    const parts = qrText.split(";");
 
-        if (parts.length !== 6) {
-            alert("QR non valido. Numero campi errato.");
-            return;
-        }
-
-        if (parts[0] !== "INI" || parts[5] !== "END") {
-            alert("QR non valido. Deve iniziare con INI e terminare con END.");
-            return;
-        }
-
-        document.getElementById("date").value = parts[1].trim();
-        document.getElementById("time").value = parts[2].trim();
-        document.getElementById("client").value = parts[3].trim();
-        document.getElementById("cashdesk").value = parts[4].trim();
-
-        setStatus("QR LETTO CORRETTAMENTE", "ready");
-
-        document.getElementById("table").focus();
-
-        stopScanner();
+    if (parts.length !== 6) {
+        alert("QR non valido. Numero campi errato.");
+        return;
     }
+
+    if (parts[0] !== "INI" || parts[5] !== "END") {
+        alert("QR non valido. Deve iniziare con INI e terminare con END.");
+        return;
+    }
+
+    lastQrRawText = qrText;
+
+    document.getElementById("date").value = parts[1].trim();
+    document.getElementById("time").value = parts[2].trim();
+    document.getElementById("client").value = parts[3].trim();
+    document.getElementById("cashdesk").value = parts[4].trim();
+
+    setStatus("QR LETTO CORRETTAMENTE", "ready");
+
+    document.getElementById("table").focus();
+
+    stopScanner();
+}
 
     function onScanFailure(error) {
         /*
@@ -444,13 +448,14 @@
         const tableFormatted = String(Number(tableRaw)).padStart(2, "0");
 
         const payload = {
-            data: document.getElementById("date").value.trim(),
-            ora: document.getElementById("time").value.trim(),
-            cliente: document.getElementById("client").value.trim(),
-            cassa: document.getElementById("cashdesk").value.trim(),
-            tavolo: tableFormatted,
-            note: document.getElementById("note").value.trim()
-        };
+    data: document.getElementById("date").value.trim(),
+    ora: document.getElementById("time").value.trim(),
+    cliente: document.getElementById("client").value.trim(),
+    cassa: document.getElementById("cashdesk").value.trim(),
+    tavolo: tableFormatted,
+    note: document.getElementById("note").value.trim(),
+    qrId: lastQrRawText
+};
 
         console.log("Payload inviato:", payload);
 
@@ -483,16 +488,30 @@
                 throw new Error("La risposta dello script non è JSON valido: " + rawResponse);
             }
 
-            if (result.status === "success") {
-                setStatus("DATI SALVATI CORRETTAMENTE", "ready");
-                alert("Dati salvati correttamente nel Google Sheet.");
+if (result.status === "success") {
+    setStatus("DATI SALVATI CORRETTAMENTE", "ready");
+    alert("Dati salvati correttamente nel Google Sheet.");
 
-                pulisciCampi();
-                await startScanner();
+    pulisciCampi();
+    lastQrRawText = "";
+    await startScanner();
 
-            } else {
-                throw new Error(result.message || "Errore sconosciuto nello script Google.");
-            }
+} else if (result.status === "duplicate") {
+    setStatus("QR GIÀ SCANSIONATO", "error");
+
+    alert(
+        "ATTENZIONE!\n\n" +
+        "Questo QR code è già stato scansionato in precedenza.\n\n" +
+        "Prima scansione:\n" + result.firstScan
+    );
+
+} else {
+    throw new Error(result.message || "Errore sconosciuto nello script Google.");
+}
+
+
+
+            
 
         } catch (error) {
             console.error("Errore invio:", error);
