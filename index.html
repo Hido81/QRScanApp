@@ -2,560 +2,554 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Tavoli Sagra</title>
+
     <meta name="theme-color" content="#007bff">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <link rel="manifest" href="manifest.json">
+
     <style>
         :root {
             --primary: #007bff;
+            --primary-dark: #0056b3;
             --success: #28a745;
             --danger: #dc3545;
+            --warning: #ffc107;
             --light: #f8f9fa;
             --dark: #343a40;
+            --gray: #6c757d;
         }
-        
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f4;
             margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-            height: 100vh;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            padding: 15px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f4f4;
+            color: #222;
         }
-        
+
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
-            padding: 20px;
             background: white;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
         }
-        
-        .scroll-target {
-            scroll-margin-top: 20px;
-        }
-        
+
         h1 {
-            color: var(--primary);
             text-align: center;
-            margin-bottom: 5px;
+            color: var(--primary);
+            margin: 0;
             font-size: 1.8rem;
         }
-        
+
         .subtitle {
             text-align: center;
-            color: #666;
-            margin-bottom: 25px;
+            color: var(--gray);
+            margin-bottom: 20px;
             font-size: 0.9rem;
         }
-        
-        .form-group {
+
+        #reader {
+            width: 100%;
+            min-height: 280px;
+            background: #eeeeee;
+            border: 2px dashed #cccccc;
+            border-radius: 12px;
+            overflow: hidden;
             margin-bottom: 15px;
         }
-        
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.sending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
         label {
             display: block;
             margin-bottom: 5px;
-            font-weight: 600;
+            font-weight: bold;
             color: var(--dark);
         }
-        
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        
-        input:read-only {
-            background-color: #f5f5f5;
-        }
-        
-        button {
+
+        input,
+        textarea {
             width: 100%;
             padding: 12px;
-            margin-top: 10px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        button:hover {
-            background-color: #0069d9;
-        }
-        
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        
-        #reader {
-            position: relative;
-            width: 100%;
-            margin: 20px 0;
-            min-height: 300px;
-            background-color: #f0f0f0;
-            border: 2px dashed #ccc;
+            border: 1px solid #cccccc;
             border-radius: 8px;
-            overflow: hidden;
+            font-size: 16px;
+            font-family: inherit;
         }
-        
-        #reader__dashboard_section_csr {
-            padding: 10px;
-            background: white;
+
+        input:read-only {
+            background: #f2f2f2;
         }
-        
-        #reader__camera_permission_button {
-            background-color: #007bff !important;
-            color: white !important;
-            border: none !important;
-            padding: 10px 15px !important;
-            border-radius: 5px !important;
-            font-size: 16px !important;
-            margin: 10px auto !important;
-            display: block !important;
-            cursor: pointer !important;
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
         }
-        
-        #reader__camera_permission_button:hover {
-            background-color: #0069d9 !important;
-        }
-        
-        .status {
-            padding: 10px;
-            margin: 15px 0;
-            border-radius: 5px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .connected {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .disconnected {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        #loading {
-            display: none;
-            text-align: center;
-            margin: 15px 0;
-        }
-        
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: var(--primary);
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .icon {
-            margin-right: 8px;
-        }
-        
-        .camera-fallback {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-        
+
         .square-container {
             display: flex;
             gap: 15px;
             margin-bottom: 15px;
         }
-        
+
         .square-box {
             flex: 1;
-            aspect-ratio: 1/1;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
+            border: 2px solid #dddddd;
+            border-radius: 12px;
             overflow: hidden;
+            background: #fafafa;
         }
-        
+
         .square-label {
-            background-color: #f0f0f0;
+            text-align: center;
+            background: #eeeeee;
             padding: 8px;
-            text-align: center;
             font-weight: bold;
         }
-        
+
         .square-content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
+            padding: 12px;
         }
-        
-        .table-number {
-            font-size: 72px;
-            font-weight: bold;
+
+        #table {
             text-align: center;
+            font-size: 54px;
+            font-weight: bold;
+            height: 100px;
+        }
+
+        button {
             width: 100%;
+            padding: 15px;
             border: none;
-            background: transparent;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
         }
-        
-        .table-number:focus {
-            outline: none;
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
-        
-        .notes-input {
-            width: 100%;
-            height: 100%;
-            border: none;
-            padding: 10px;
-            resize: none;
-            font-family: inherit;
-            font-size: 14px;
+
+        #sendData {
+            background: var(--success);
+            color: white;
         }
-        
-        .notes-input:focus {
-            outline: none;
-        }
-        
-        /* Stili per PWA fullscreen */
-        @media all and (display-mode: standalone) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                box-shadow: none;
-                border-radius: 0;
-            }
-        }
-        
-        /* Pulsante installazione */
-        #installButton {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            padding: 10px 20px;
+
+        #newScan {
             background: var(--primary);
             color: white;
-            border: none;
-            border-radius: 5px;
-            display: none;
+        }
+
+        #manualTest {
+            background: var(--warning);
+            color: #222;
+        }
+
+        .small-info {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+        }
+
+        @media (max-width: 520px) {
+            .square-container {
+                flex-direction: column;
+            }
+
+            #table {
+                font-size: 46px;
+            }
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <div id="header" class="scroll-target">
-            <h1>Gestione Tavoli Sagra</h1>
-            <div class="subtitle">by Marco Idolazzi</div>
-        </div>
-        
-        <div id="reader">
-            <div id="reader__scan_region">
-                <div class="camera-fallback">
-                    <p>Attendere l'attivazione della fotocamera...</p>
-                    <p>Se non parte automaticamente, clicca sul pulsante qui sotto:</p>
-                </div>
-            </div>
-            <div id="reader__dashboard">
-                <div id="reader__dashboard_section_csr">
-                    <button id="reader__camera_permission_button">Attiva Fotocamera</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="connection-status" class="status connected">
-            <span class="icon">✓</span> PRONTO ALL'USO
-        </div>
-        
-        <div class="form-group">
-            <label for="date">Data:</label>
-            <input type="text" id="date" readonly>
-        </div>
-        
-        <div class="form-group">
-            <label for="time">Orario:</label>
-            <input type="text" id="time" readonly>
-        </div>
-        
-        <div class="form-group">
-            <label for="text">Cliente:</label>
-            <input type="text" id="text" maxlength="20" readonly>
-        </div>
-        
-        <div class="form-group">
-            <label for="letter">Cassa:</label>
-            <input type="text" id="letter" maxlength="1" readonly>
-        </div>
-        
-        <div class="square-container">
-            <div class="square-box">
-                <div class="square-label">Tavolo</div>
-                <div class="square-content">
-                    <input type="number" id="table" class="table-number" min="1" max="99" required 
-                           placeholder="Nr" oninput="formatTableNumber(this)">
-                </div>
-            </div>
-            <div class="square-box">
-                <div class="square-label">Note (max 50 caratteri)</div>
-                <div class="square-content">
-                    <textarea id="note" class="notes-input" maxlength="50" 
-                              placeholder="Scrivi qui"></textarea>
-                </div>
+
+<div class="container">
+
+    <h1>Gestione Tavoli Sagra</h1>
+    <div class="subtitle">Invio dati a Google Sheet</div>
+
+    <div id="reader"></div>
+
+    <div id="connection-status" class="status ready">
+        PRONTO ALL'USO
+    </div>
+
+    <div class="form-group">
+        <label for="date">Data</label>
+        <input type="text" id="date" readonly>
+    </div>
+
+    <div class="form-group">
+        <label for="time">Ora</label>
+        <input type="text" id="time" readonly>
+    </div>
+
+    <div class="form-group">
+        <label for="client">Cliente</label>
+        <input type="text" id="client" maxlength="20" readonly>
+    </div>
+
+    <div class="form-group">
+        <label for="cashdesk">Cassa</label>
+        <input type="text" id="cashdesk" maxlength="1" readonly>
+    </div>
+
+    <div class="square-container">
+        <div class="square-box">
+            <div class="square-label">Tavolo</div>
+            <div class="square-content">
+                <input 
+                    type="number" 
+                    id="table" 
+                    min="1" 
+                    max="99" 
+                    placeholder="Nr"
+                    inputmode="numeric"
+                >
             </div>
         </div>
-        
-        <button id="sendData">INVIA DATI</button>
-        <button id="newScan">NUOVA SCANSIONE</button>
-        
-        <div id="loading">
-            <div class="spinner"></div>
-            <p>Invio dati in corso...</p>
+
+        <div class="square-box">
+            <div class="square-label">Note</div>
+            <div class="square-content">
+                <textarea 
+                    id="note" 
+                    maxlength="50" 
+                    placeholder="Note max 50 caratteri"
+                ></textarea>
+            </div>
         </div>
     </div>
 
-    <button id="installButton">Installa App</button>
+    <button id="sendData">INVIA DATI</button>
+    <button id="newScan">NUOVA SCANSIONE</button>
+    <button id="manualTest">TEST MANUALE</button>
 
-    <!-- Includi la libreria QR Scanner -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
-    
-    <script>
-        // Configurazione
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTgd7RKOVIgZl237ZcVqfLhS5VUp5s79Weixe-FQUHHxuF4BjR7GkVK5pdBNh6NxHhBw/exec";
-        
-        // Elementi DOM
-        const sendButton = document.getElementById('sendData');
-        const loadingIndicator = document.getElementById('loading');
-        const installButton = document.getElementById('installButton');
-        let scanner = null;
-        let deferredPrompt = null;
-        
-        // Formatta il numero del tavolo a 2 cifre
-        function formatTableNumber(input) {
-            let value = input.value;
-            
-            // Rimuovi caratteri non numerici
-            value = value.replace(/[^0-9]/g, '');
-            
-            // Limita a 2 cifre
-            if (value.length > 2) {
-                value = value.slice(0, 2);
-            }
-            
-            // Aggiorna il valore
-            input.value = value;
-            
-            // Se il valore è vuoto, mostra il placeholder
-            if (!value) {
-                input.placeholder = "Nr";
-            } else {
-                input.placeholder = "";
-            }
-        }
-        
-        // Verifica se tutti i campi obbligatori sono compilati
-        function checkRequiredFields() {
-            const date = document.getElementById("date").value;
-            const time = document.getElementById("time").value;
-            const text = document.getElementById("text").value;
-            const letter = document.getElementById("letter").value;
-            const table = document.getElementById("table").value;
-            
-            return date && time && text && letter && table;
-        }
-        
-        // Inizializza lo scanner QR
-        function initScanner() {
-            if (scanner) return;
+    <div class="small-info">
+        Formato QR atteso: INI;data;ora;cliente;cassa;END
+    </div>
 
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length) {
-                    startScanner();
-                } else {
-                    alert("Nessuna fotocamera disponibile!");
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
+
+<script>
+    /*
+        IMPORTANTE:
+        Sostituisci questo URL con quello della tua Web App Google Apps Script.
+        Deve terminare con /exec
+    */
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTgd7RKOVIgZl237ZcVqfLhS5VUp5s79Weixe-FQUHHxuF4BjR7GkVK5pdBNh6NxHhBw/exec";
+
+    const statusBox = document.getElementById("connection-status");
+    const sendButton = document.getElementById("sendData");
+    const newScanButton = document.getElementById("newScan");
+    const manualTestButton = document.getElementById("manualTest");
+
+    let scannerStarted = false;
+    let html5QrCode = null;
+
+    function setStatus(message, type) {
+        statusBox.textContent = message;
+        statusBox.className = "status " + type;
+    }
+
+    function pulisciCampi() {
+        document.getElementById("date").value = "";
+        document.getElementById("time").value = "";
+        document.getElementById("client").value = "";
+        document.getElementById("cashdesk").value = "";
+        document.getElementById("table").value = "";
+        document.getElementById("note").value = "";
+    }
+
+    function validaNumeroTavolo() {
+        const tableValue = document.getElementById("table").value.trim();
+
+        if (!tableValue) {
+            alert("Inserisci il numero del tavolo.");
+            return false;
+        }
+
+        const tableNumber = Number(tableValue);
+
+        if (Number.isNaN(tableNumber) || tableNumber < 1 || tableNumber > 99) {
+            alert("Il numero del tavolo deve essere compreso tra 1 e 99.");
+            return false;
+        }
+
+        return true;
+    }
+
+    function checkCampiObbligatori() {
+        const date = document.getElementById("date").value.trim();
+        const time = document.getElementById("time").value.trim();
+        const client = document.getElementById("client").value.trim();
+        const cashdesk = document.getElementById("cashdesk").value.trim();
+
+        if (!date || !time || !client || !cashdesk) {
+            alert("Prima devi scansionare un QR code valido oppure usare il test manuale.");
+            return false;
+        }
+
+        return true;
+    }
+
+    function onScanSuccess(decodedText) {
+        console.log("QR letto:", decodedText);
+
+        const parts = decodedText.split(";");
+
+        if (parts.length !== 6) {
+            alert("QR non valido. Numero campi errato.");
+            return;
+        }
+
+        if (parts[0] !== "INI" || parts[5] !== "END") {
+            alert("QR non valido. Deve iniziare con INI e terminare con END.");
+            return;
+        }
+
+        document.getElementById("date").value = parts[1].trim();
+        document.getElementById("time").value = parts[2].trim();
+        document.getElementById("client").value = parts[3].trim();
+        document.getElementById("cashdesk").value = parts[4].trim();
+
+        setStatus("QR LETTO CORRETTAMENTE", "ready");
+
+        document.getElementById("table").focus();
+
+        stopScanner();
+    }
+
+    function onScanFailure(error) {
+        /*
+            Gli errori di scansione sono normali mentre la camera cerca un QR.
+            Non mostriamo alert continui.
+        */
+    }
+
+    async function startScanner() {
+        if (scannerStarted) return;
+
+        try {
+            html5QrCode = new Html5Qrcode("reader");
+
+            const cameras = await Html5Qrcode.getCameras();
+
+            if (!cameras || cameras.length === 0) {
+                setStatus("NESSUNA FOTOCAMERA TROVATA", "error");
+                return;
+            }
+
+            let cameraId = cameras[0].id;
+
+            /*
+                Se ci sono più fotocamere, prova a usare quella posteriore.
+            */
+            for (const camera of cameras) {
+                const label = camera.label.toLowerCase();
+                if (
+                    label.includes("back") ||
+                    label.includes("rear") ||
+                    label.includes("environment") ||
+                    label.includes("posteriore")
+                ) {
+                    cameraId = camera.id;
+                    break;
                 }
-            }).catch(err => {
-                alert("Errore nell'accesso alla fotocamera!");
-            });
-        }
-        
-        // Avvia lo scanner
-        function startScanner() {
-            scanner = new Html5QrcodeScanner(
-                "reader", 
-                { 
-                    qrbox: { width: 250, height: 250 },
+            }
+
+            await html5QrCode.start(
+                cameraId,
+                {
                     fps: 10,
-                    rememberLastUsedCamera: true,
-                    aspectRatio: 1.333333
-                },
-                false
-            );
-            
-            scanner.render(
-                decodedText => {
-                    onScanSuccess(decodedText);
-                    scanner.clear().catch(console.error);
-                },
-                error => {
-                    console.error("Errore scanner:", error);
-                }
-            );
-        }
-        
-        // Callback scansione QR
-        function onScanSuccess(decodedText) {
-            const parts = decodedText.split(";");
-            if (parts.length === 6 && parts[0] === "INI" && parts[5] === "END") {
-                document.getElementById("date").value = parts[1];
-                document.getElementById("time").value = parts[2];
-                document.getElementById("text").value = parts[3];
-                document.getElementById("letter").value = parts[4];
-                document.getElementById("table").focus();
-            } else {
-                alert("Formato QR non valido! Atteso: INI;data;ora;cliente;cassa;END");
-            }
-        }
-        
-        // Invia dati al server
-        async function sendData() {
-            // Verifica tutti i campi obbligatori
-            if (!checkRequiredFields()) {
-                alert("Compila tutti i campi obbligatori (Data, Orario, Cliente, Cassa e Tavolo)");
-                return;
-            }
-            
-            const table = document.getElementById("table").value;
-            
-            // Validazione campo tavolo
-            if (!table || table < 1 || table > 99) {
-                alert("Inserisci un numero tavolo valido (da 01 a 99)");
-                return;
-            }
-            
-            const tableFormatted = String(table).padStart(2, '0');
-            const date = document.getElementById("date").value;
-            const time = document.getElementById("time").value;
-            const text = document.getElementById("text").value;
-            const letter = document.getElementById("letter").value;
-            const note = document.getElementById("note").value;
-            
-            const dataString = `${date};${time};${text};${letter};${tableFormatted};${note}`;
-            
-            // Mostra indicatore di caricamento
-            sendButton.disabled = true;
-            loadingIndicator.style.display = 'block';
-            
-            try {
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: dataString
-                });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    // Resetta tutti i campi dopo l'invio
-                    document.getElementById("date").value = "";
-                    document.getElementById("time").value = "";
-                    document.getElementById("text").value = "";
-                    document.getElementById("letter").value = "";
-                    document.getElementById("table").value = "";
-                    document.getElementById("note").value = "";
-                    document.getElementById("table").placeholder = "Nr";
-                    
-                    alert("Dati salvati con successo!");
-                    initScanner(); // Prepara per nuova scansione
-                } else {
-                    throw new Error(result.message || "Errore nel salvataggio");
-                }
-            } catch (error) {
-                alert(`Errore nell'invio: ${error.message}`);
-            } finally {
-                loadingIndicator.style.display = 'none';
-                sendButton.disabled = false;
-            }
-        }
-        
-        // Gestione installazione PWA
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Mostra il pulsante solo se non è già in modalità standalone
-            if (!window.matchMedia('(display-mode: standalone)').matches) {
-                installButton.style.display = 'block';
-            }
-        });
-        
-        installButton.addEventListener('click', () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        installButton.style.display = 'none';
+                    qrbox: {
+                        width: 250,
+                        height: 250
                     }
-                    deferredPrompt = null;
-                });
-            }
-        });
-        
-        // Event Listeners
-        document.getElementById("sendData").addEventListener("click", sendData);
-        document.getElementById("newScan").addEventListener("click", () => {
-            // Scroll verso l'alto al titolo
-            document.getElementById('header').scrollIntoView({
-                behavior: 'smooth'
-            });
-            
-            // Ricarica dopo un breve ritardo per permettere lo scroll
-            setTimeout(() => {
-                location.reload();
-            }, 500);
-        });
-        
-        // Inizializzazione
-        window.addEventListener('load', () => {
-            initScanner();
-            
-            // Nascondi il pulsante installa se già in PWA
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                installButton.style.display = 'none';
-            }
-        });
-        
-        // Service Worker per PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js');
-            });
+                },
+                onScanSuccess,
+                onScanFailure
+            );
+
+            scannerStarted = true;
+            setStatus("FOTOCAMERA ATTIVA - SCANSIONA IL QR", "ready");
+
+        } catch (error) {
+            console.error("Errore scanner:", error);
+            setStatus("ERRORE FOTOCAMERA: " + error.message, "error");
         }
-    </script>
+    }
+
+    async function stopScanner() {
+        if (!html5QrCode || !scannerStarted) return;
+
+        try {
+            await html5QrCode.stop();
+            await html5QrCode.clear();
+            scannerStarted = false;
+        } catch (error) {
+            console.warn("Errore durante stop scanner:", error);
+        }
+    }
+
+    async function inviaDati() {
+        if (!checkCampiObbligatori()) return;
+        if (!validaNumeroTavolo()) return;
+
+        const tableRaw = document.getElementById("table").value.trim();
+        const tableFormatted = String(Number(tableRaw)).padStart(2, "0");
+
+        const payload = {
+            data: document.getElementById("date").value.trim(),
+            ora: document.getElementById("time").value.trim(),
+            cliente: document.getElementById("client").value.trim(),
+            cassa: document.getElementById("cashdesk").value.trim(),
+            tavolo: tableFormatted,
+            note: document.getElementById("note").value.trim()
+        };
+
+        console.log("Payload inviato:", payload);
+
+        sendButton.disabled = true;
+        setStatus("INVIO DATI IN CORSO...", "sending");
+
+        try {
+            /*
+                Uso text/plain per evitare preflight CORS problematici con Google Apps Script.
+                Dentro il body mando comunque JSON.
+            */
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
+                body: JSON.stringify(payload),
+                redirect: "follow"
+            });
+
+            const rawResponse = await response.text();
+
+            console.log("Risposta grezza dal server:", rawResponse);
+
+            let result;
+
+            try {
+                result = JSON.parse(rawResponse);
+            } catch (jsonError) {
+                throw new Error("La risposta dello script non è JSON valido: " + rawResponse);
+            }
+
+            if (result.status === "success") {
+                setStatus("DATI SALVATI CORRETTAMENTE", "ready");
+                alert("Dati salvati correttamente nel Google Sheet.");
+
+                pulisciCampi();
+                await startScanner();
+
+            } else {
+                throw new Error(result.message || "Errore sconosciuto nello script Google.");
+            }
+
+        } catch (error) {
+            console.error("Errore invio:", error);
+            setStatus("ERRORE INVIO DATI", "error");
+            alert("Errore durante l'invio dei dati:\n\n" + error.message);
+
+        } finally {
+            sendButton.disabled = false;
+        }
+    }
+
+    function inserisciDatiTest() {
+        const now = new Date();
+
+        const data = now.toLocaleDateString("it-IT");
+        const ora = now.toLocaleTimeString("it-IT", {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+
+        document.getElementById("date").value = data;
+        document.getElementById("time").value = ora;
+        document.getElementById("client").value = "CLIENTE TEST";
+        document.getElementById("cashdesk").value = "A";
+        document.getElementById("table").value = "1";
+        document.getElementById("note").value = "prova invio";
+
+        setStatus("DATI TEST INSERITI", "ready");
+    }
+
+    sendButton.addEventListener("click", inviaDati);
+
+    newScanButton.addEventListener("click", async () => {
+        pulisciCampi();
+        setStatus("NUOVA SCANSIONE", "ready");
+        await startScanner();
+    });
+
+    manualTestButton.addEventListener("click", inserisciDatiTest);
+
+    window.addEventListener("load", async () => {
+        await startScanner();
+    });
+
+    /*
+        Service Worker disattivato per evitare problemi di cache durante i test.
+        Quando tutto funziona, puoi riattivarlo.
+    */
+
+    /*
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js");
+        });
+    }
+    */
+</script>
+
 </body>
 </html>
