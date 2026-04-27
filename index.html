@@ -8,6 +8,7 @@
     <meta name="theme-color" content="#007bff">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <link rel="manifest" href="manifest.json">
 
@@ -179,11 +180,6 @@
             color: white;
         }
 
-        #manualTest {
-            background: var(--warning);
-            color: #222;
-        }
-
         .small-info {
             margin-top: 15px;
             font-size: 13px;
@@ -200,6 +196,17 @@
                 font-size: 46px;
             }
         }
+
+        @media all and (display-mode: standalone) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+        }
     </style>
 </head>
 
@@ -208,7 +215,7 @@
 <div class="container">
 
     <h1>Gestione Tavoli Sagra</h1>
-    <div class="subtitle">Invio dati a Google Sheet</div>
+    <div class="subtitle">Scansione QR e invio dati a Google Sheet</div>
 
     <div id="reader"></div>
 
@@ -247,6 +254,7 @@
                     max="99" 
                     placeholder="Nr"
                     inputmode="numeric"
+                    disabled
                 >
             </div>
         </div>
@@ -258,14 +266,14 @@
                     id="note" 
                     maxlength="50" 
                     placeholder="Note max 50 caratteri"
+                    disabled
                 ></textarea>
             </div>
         </div>
     </div>
 
-    <button id="sendData">INVIA DATI</button>
+    <button id="sendData" disabled>INVIA DATI</button>
     <button id="newScan">NUOVA SCANSIONE</button>
-    <button id="manualTest">TEST MANUALE</button>
 
     <div class="small-info">
         Formato QR atteso: INI;data;ora;cliente;cassa;END
@@ -277,37 +285,58 @@
 
 <script>
     /*
-        IMPORTANTE:
-        Sostituisci questo URL con quello della tua Web App Google Apps Script.
-        Deve terminare con /exec
+        URL della Web App Google Apps Script.
+        Deve essere l'URL che termina con /exec.
     */
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOPC6hg6oA7Hh4LQhfjo64BBxM2lbH1TGsP6mQfcDMymfi0T6P6eXTZ8qZ3P9v7k61aA/exec";
 
     const statusBox = document.getElementById("connection-status");
     const sendButton = document.getElementById("sendData");
     const newScanButton = document.getElementById("newScan");
-    const manualTestButton = document.getElementById("manualTest");
+    const tableInput = document.getElementById("table");
+    const noteInput = document.getElementById("note");
 
     let scannerStarted = false;
     let html5QrCode = null;
+    let lastQrRawText = "";
+    let qrReadyToSend = false;
+    let isProcessingScan = false;
 
     function setStatus(message, type) {
         statusBox.textContent = message;
         statusBox.className = "status " + type;
     }
 
+    function abilitaInserimento() {
+        tableInput.disabled = false;
+        noteInput.disabled = false;
+        sendButton.disabled = false;
+        qrReadyToSend = true;
+    }
+
+    function disabilitaInserimento() {
+        tableInput.disabled = true;
+        noteInput.disabled = true;
+        sendButton.disabled = true;
+        qrReadyToSend = false;
+    }
+
     function pulisciCampi() {
-    document.getElementById("date").value = "";
-    document.getElementById("time").value = "";
-    document.getElementById("client").value = "";
-    document.getElementById("cashdesk").value = "";
-    document.getElementById("table").value = "";
-    document.getElementById("note").value = "";
-    lastQrRawText = "";
-}
+        document.getElementById("date").value = "";
+        document.getElementById("time").value = "";
+        document.getElementById("client").value = "";
+        document.getElementById("cashdesk").value = "";
+        document.getElementById("table").value = "";
+        document.getElementById("note").value = "";
+
+        lastQrRawText = "";
+        isProcessingScan = false;
+
+        disabilitaInserimento();
+    }
 
     function validaNumeroTavolo() {
-        const tableValue = document.getElementById("table").value.trim();
+        const tableValue = tableInput.value.trim();
 
         if (!tableValue) {
             alert("Inserisci il numero del tavolo.");
@@ -330,49 +359,17 @@
         const client = document.getElementById("client").value.trim();
         const cashdesk = document.getElementById("cashdesk").value.trim();
 
-        if (!date || !time || !client || !cashdesk) {
-            alert("Prima devi scansionare un QR code valido oppure usare il test manuale.");
+        if (!date || !time || !client || !cashdesk || !lastQrRawText) {
+            alert("Prima devi scansionare un QR code valido.");
+            return false;
+        }
+
+        if (!qrReadyToSend) {
+            alert("Il QR non è ancora pronto per l'invio.");
             return false;
         }
 
         return true;
-    }
-
-    function onScanSuccess(decodedText) {
-    console.log("QR letto:", decodedText);
-
-    const qrText = decodedText.trim();
-    const parts = qrText.split(";");
-
-    if (parts.length !== 6) {
-        alert("QR non valido. Numero campi errato.");
-        return;
-    }
-
-    if (parts[0] !== "INI" || parts[5] !== "END") {
-        alert("QR non valido. Deve iniziare con INI e terminare con END.");
-        return;
-    }
-
-    lastQrRawText = qrText;
-
-    document.getElementById("date").value = parts[1].trim();
-    document.getElementById("time").value = parts[2].trim();
-    document.getElementById("client").value = parts[3].trim();
-    document.getElementById("cashdesk").value = parts[4].trim();
-
-    setStatus("QR LETTO CORRETTAMENTE", "ready");
-
-    document.getElementById("table").focus();
-
-    stopScanner();
-}
-
-    function onScanFailure(error) {
-        /*
-            Gli errori di scansione sono normali mentre la camera cerca un QR.
-            Non mostriamo alert continui.
-        */
     }
 
     async function startScanner() {
@@ -390,11 +387,9 @@
 
             let cameraId = cameras[0].id;
 
-            /*
-                Se ci sono più fotocamere, prova a usare quella posteriore.
-            */
             for (const camera of cameras) {
-                const label = camera.label.toLowerCase();
+                const label = (camera.label || "").toLowerCase();
+
                 if (
                     label.includes("back") ||
                     label.includes("rear") ||
@@ -440,22 +435,136 @@
         }
     }
 
+    function onScanFailure(error) {
+        /*
+            Gli errori durante la ricerca del QR sono normali.
+            Non mostriamo messaggi continui.
+        */
+    }
+
+    async function controllaQrGiaAcquisito(qrText) {
+        const payload = {
+            action: "check",
+            qrId: qrText
+        };
+
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(payload),
+            redirect: "follow"
+        });
+
+        const rawResponse = await response.text();
+
+        console.log("Risposta controllo QR:", rawResponse);
+
+        let result;
+
+        try {
+            result = JSON.parse(rawResponse);
+        } catch (error) {
+            throw new Error("Risposta non JSON dal controllo QR: " + rawResponse);
+        }
+
+        return result;
+    }
+
+    async function onScanSuccess(decodedText) {
+        if (isProcessingScan) return;
+        isProcessingScan = true;
+
+        console.log("QR letto:", decodedText);
+
+        const qrText = decodedText.trim();
+        const parts = qrText.split(";");
+
+        if (parts.length !== 6) {
+            alert("QR non valido. Numero campi errato.");
+            isProcessingScan = false;
+            return;
+        }
+
+        if (parts[0] !== "INI" || parts[5] !== "END") {
+            alert("QR non valido. Deve iniziare con INI e terminare con END.");
+            isProcessingScan = false;
+            return;
+        }
+
+        setStatus("CONTROLLO QR IN CORSO...", "sending");
+
+        try {
+            await stopScanner();
+
+            const checkResult = await controllaQrGiaAcquisito(qrText);
+
+            if (checkResult.status === "duplicate") {
+                setStatus("QR GIÀ ACQUISITO", "error");
+
+                alert(
+                    "ATTENZIONE!\n\n" +
+                    "Questo QR code è già stato acquisito.\n\n" +
+                    "Cliente: " + (checkResult.cliente || "non disponibile") + "\n" +
+                    "Tavolo: " + (checkResult.tavolo || "non disponibile") + "\n" +
+                    "Prima acquisizione: " + (checkResult.firstScan || "non disponibile")
+                );
+
+                pulisciCampi();
+                await startScanner();
+                return;
+            }
+
+            if (checkResult.status !== "available") {
+                throw new Error(checkResult.message || "Risposta controllo QR non valida.");
+            }
+
+            lastQrRawText = qrText;
+
+            document.getElementById("date").value = parts[1].trim();
+            document.getElementById("time").value = parts[2].trim();
+            document.getElementById("client").value = parts[3].trim();
+            document.getElementById("cashdesk").value = parts[4].trim();
+
+            abilitaInserimento();
+
+            setStatus("QR VALIDO - INSERISCI TAVOLO E NOTE", "ready");
+
+            tableInput.focus();
+
+        } catch (error) {
+            console.error("Errore controllo QR:", error);
+
+            setStatus("ERRORE CONTROLLO QR", "error");
+
+            alert(
+                "Errore durante il controllo del QR:\n\n" +
+                error.message
+            );
+
+            pulisciCampi();
+            await startScanner();
+        }
+    }
+
     async function inviaDati() {
         if (!checkCampiObbligatori()) return;
         if (!validaNumeroTavolo()) return;
 
-        const tableRaw = document.getElementById("table").value.trim();
+        const tableRaw = tableInput.value.trim();
         const tableFormatted = String(Number(tableRaw)).padStart(2, "0");
 
         const payload = {
-    data: document.getElementById("date").value.trim(),
-    ora: document.getElementById("time").value.trim(),
-    cliente: document.getElementById("client").value.trim(),
-    cassa: document.getElementById("cashdesk").value.trim(),
-    tavolo: tableFormatted,
-    note: document.getElementById("note").value.trim(),
-    qrId: lastQrRawText
-};
+            action: "save",
+            data: document.getElementById("date").value.trim(),
+            ora: document.getElementById("time").value.trim(),
+            cliente: document.getElementById("client").value.trim(),
+            cassa: document.getElementById("cashdesk").value.trim(),
+            tavolo: tableFormatted,
+            note: noteInput.value.trim(),
+            qrId: lastQrRawText
+        };
 
         console.log("Payload inviato:", payload);
 
@@ -463,10 +572,6 @@
         setStatus("INVIO DATI IN CORSO...", "sending");
 
         try {
-            /*
-                Uso text/plain per evitare preflight CORS problematici con Google Apps Script.
-                Dentro il body mando comunque JSON.
-            */
             const response = await fetch(GOOGLE_SCRIPT_URL, {
                 method: "POST",
                 headers: {
@@ -478,7 +583,7 @@
 
             const rawResponse = await response.text();
 
-            console.log("Risposta grezza dal server:", rawResponse);
+            console.log("Risposta salvataggio:", rawResponse);
 
             let result;
 
@@ -488,77 +593,65 @@
                 throw new Error("La risposta dello script non è JSON valido: " + rawResponse);
             }
 
-if (result.status === "success") {
-    setStatus("DATI SALVATI CORRETTAMENTE", "ready");
-    alert("Dati salvati correttamente nel Google Sheet.");
+            if (result.status === "success") {
+                setStatus("DATI SALVATI CORRETTAMENTE", "ready");
 
-    pulisciCampi();
-    lastQrRawText = "";
-    await startScanner();
+                alert("Dati salvati correttamente nel Google Sheet.");
 
-} else if (result.status === "duplicate") {
-    setStatus("QR GIÀ SCANSIONATO", "error");
+                pulisciCampi();
+                await startScanner();
 
-    alert(
-        "ATTENZIONE!\n\n" +
-        "Questo QR code è già stato scansionato in precedenza.\n\n" +
-        "Prima scansione:\n" + result.firstScan
-    );
+            } else if (result.status === "duplicate") {
+                setStatus("QR GIÀ ACQUISITO", "error");
 
-} else {
-    throw new Error(result.message || "Errore sconosciuto nello script Google.");
-}
+                alert(
+                    "ATTENZIONE!\n\n" +
+                    "Questo QR code è già stato acquisito.\n\n" +
+                    "Cliente: " + (result.cliente || "non disponibile") + "\n" +
+                    "Tavolo: " + (result.tavolo || "non disponibile") + "\n" +
+                    "Prima acquisizione: " + (result.firstScan || "non disponibile")
+                );
 
+                pulisciCampi();
+                await startScanner();
 
-
-            
+            } else {
+                throw new Error(result.message || "Errore sconosciuto nello script Google.");
+            }
 
         } catch (error) {
             console.error("Errore invio:", error);
+
             setStatus("ERRORE INVIO DATI", "error");
-            alert("Errore durante l'invio dei dati:\n\n" + error.message);
 
-        } finally {
+            alert(
+                "Errore durante l'invio dei dati:\n\n" +
+                error.message
+            );
+
             sendButton.disabled = false;
+
         }
-    }
-
-    function inserisciDatiTest() {
-        const now = new Date();
-
-        const data = now.toLocaleDateString("it-IT");
-        const ora = now.toLocaleTimeString("it-IT", {
-            hour: "2-digit",
-            minute: "2-digit"
-        });
-
-        document.getElementById("date").value = data;
-        document.getElementById("time").value = ora;
-        document.getElementById("client").value = "CLIENTE TEST";
-        document.getElementById("cashdesk").value = "A";
-        document.getElementById("table").value = "1";
-        document.getElementById("note").value = "prova invio";
-
-        setStatus("DATI TEST INSERITI", "ready");
     }
 
     sendButton.addEventListener("click", inviaDati);
 
     newScanButton.addEventListener("click", async () => {
+        await stopScanner();
         pulisciCampi();
         setStatus("NUOVA SCANSIONE", "ready");
         await startScanner();
     });
 
-    manualTestButton.addEventListener("click", inserisciDatiTest);
-
     window.addEventListener("load", async () => {
+        pulisciCampi();
         await startScanner();
     });
 
     /*
-        Service Worker disattivato per evitare problemi di cache durante i test.
-        Quando tutto funziona, puoi riattivarlo.
+        Service Worker disattivato durante i test per evitare problemi di cache.
+
+        Quando tutto funziona stabilmente, potrai riattivarlo togliendo i commenti.
     */
 
     /*
